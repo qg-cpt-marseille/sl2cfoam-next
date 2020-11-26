@@ -39,7 +39,7 @@ extern "C" {
 #include <errno.h>
 
 ////////////////////////////////////////////////////////////////////
-// Routines for aligned memoery allocation.
+// Routines for aligned memory allocation.
 ////////////////////////////////////////////////////////////////////
 
 // align memory addresses to 64 bits
@@ -200,47 +200,49 @@ typedef struct sl2cfoam_tensor_##name {   \
     uint8_t* __tensor_header = calloc(__header_bytes, sizeof(uint8_t));       \
     memcpy(__tensor_header, t->dims, sizeof(uint32_t) * t->num_keys);         \
     memcpy(__tensor_header + __dim_bytes, t->tag, __TAG_BYTES);               \
-    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;                      \
-    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, mode);                   \
-    if (fd == -1 && errno != EEXIST) {                                        \
-        warning("error writing to file %s: %s", path, strerror(errno));       \
+    FILE *ptr;                                                                \
+    ptr = fopen(path, "wbx");                                                 \
+    if (ptr == NULL) {                                                        \
+        if (errno != EEXIST)                                                  \
+            warning("error writing to file %s: %s", path, strerror(errno));   \
         goto store_##t##_end;                                                 \
     }                                                                         \
-    if (flock(fd, LOCK_EX) != 0) {                                            \
+    if (flock(fileno(ptr), LOCK_EX) != 0) {                                   \
         warning("error locking file for writing: %s", strerror(errno));       \
         goto store_##t##_end;                                                 \
     }                                                                         \
     size_t ret;                                                               \
-    ret = write(fd, __tensor_header, __header_bytes);                         \
+    ret = fwrite(__tensor_header, sizeof(uint8_t), __header_bytes, ptr);      \
     if (ret != __header_bytes) {                                              \
-        warning("error storing tensor header");                               \
+        warning("error storing tensor header, err: %s", strerror(errno));     \
         goto store_##t##_end;                                                 \
     }                                                                         \
-    ret = write(fd, t->d, sizeof(double) * t->dim);                           \
-    if (ret != sizeof(double) * t->dim) {                                     \
-        warning("error storing tensor data");                                 \
+    ret = fwrite(t->d, sizeof(double), t->dim, ptr);                          \
+    if (ret != t->dim) {                                                      \
+        warning("error storing tensor data, err: %s", strerror(errno));       \
         goto store_##t##_end;                                                 \
     }                                                                         \
-    fsync(fd);                                                                \
-    if (flock(fd, LOCK_UN) != 0) {                                            \
+    fflush(ptr);                                                              \
+    if (flock(fileno(ptr), LOCK_UN) != 0) {                                   \
         warning("error unlocking file: %s", strerror(errno));                 \
     }                                                                         \
 store_##t##_end:                                                              \
-    if (fd != -1) close(fd);                                                  \
+    if (ptr != NULL) fclose(ptr);                                             \
     free(__tensor_header);                                                    \
-    }                                                                         \
+    }
 
 // Reads a tensor from disk.
 // It must be later deallocated with TENSOR_FREE(t).
 #define TENSOR_LOAD(name, t, nkeys, path)                                     \
     {                                                                         \
-    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;                      \
-    int fd = open(path, O_RDONLY, mode);                                      \
-    if (fd == -1) {                                                           \
+    size_t __header_bytes = sizeof(uint32_t) * __NUM_KEYS_MAX + __TAG_BYTES;  \
+    FILE *ptr;                                                                \
+    ptr = fopen(path,"rb");                                                   \
+    if (ptr == NULL) {                                                        \
         warning("error opening file %s: %s", path, strerror(errno));          \
         t = NULL; goto load_##t##_end;                                        \
     }                                                                         \
-    if (flock(fd, LOCK_SH) != 0) {                                            \
+    if (flock(fileno(ptr), LOCK_SH) != 0) {                                   \
         warning("error locking file for reading: %s", strerror(errno));       \
         goto load_##t##_end;                                                  \
     }                                                                         \
@@ -248,10 +250,10 @@ store_##t##_end:                                                              \
     t->num_keys = nkeys;                                                      \
     t->tag = calloc(__TAG_BYTES, sizeof(uint8_t));                            \
     size_t ret;                                                               \
-    ret = read(fd, t->dims, sizeof(uint32_t) * nkeys);                        \
-    lseek(fd, sizeof(uint32_t) * __NUM_KEYS_MAX, SEEK_SET);                   \
-    ret += read(fd, t->tag, __TAG_BYTES);                                     \
-    if (ret != sizeof(uint32_t) * nkeys + __TAG_BYTES) {                      \
+    ret = fread(t->dims, sizeof(uint32_t), nkeys, ptr);                       \
+    fseek(ptr, sizeof(uint32_t) * __NUM_KEYS_MAX, SEEK_SET);                  \
+    ret += fread(t->tag, sizeof(uint8_t), __TAG_BYTES, ptr);                  \
+    if (ret != t->num_keys + __TAG_BYTES) {                                   \
         warning("error reading tensor header, err: %s", strerror(errno));     \
         free(t);                                                              \
         t = NULL; goto load_##t##_end;                                        \
@@ -263,19 +265,19 @@ store_##t##_end:                                                              \
     }                                                                         \
     t->dim = (size_t) dim;                                                    \
     t->d = sl2cfoam_aligned_calloc(dim);                                      \
-    ret = read(fd, t->d, sizeof(double) * dim);                               \
-    if (ret != sizeof(double) * t->dim) {                                     \
-        warning("error reading tensor data");                                 \
+    ret = fread(t->d, sizeof(double), dim, ptr);                              \
+    if (ret != t->dim) {                                                      \
+        warning("error reading tensor data, err: %s", strerror(errno));       \
         sl2cfoam_aligned_free(t->d); free(t);                                 \
         t = NULL; goto load_##t##_end;                                        \
     }                                                                         \
-    if (flock(fd, LOCK_UN) != 0) {                                            \
+    if (flock(fileno(ptr), LOCK_UN) != 0) {                                   \
         warning("error unlocking file: %s", strerror(errno));                 \
     }                                                                         \
 load_##t##_end:                                                               \
-    if (fd != -1) close(fd);                                                  \
-    }                                                                         \
-    
+    if (ptr != NULL) fclose(ptr);                                             \
+    }
+
 
 ///////////////////////////////////////////////////////////////
 // Simple custom types for matrices and vectors.
