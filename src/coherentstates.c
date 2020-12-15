@@ -29,7 +29,7 @@
 // computes the wigner matrix D^j_(jm) (phi, theta, -phi)
 // in arbitrary precision
 static void wigner_dmatel(mpc_t rop, int precision, 
-                          dspin two_j, int two_m, double phi, double theta, int sign) {
+                          dspin two_j, int two_m, double theta, double phi) {
 
     int Jpm, Jmm;
     Jpm = DIV2(two_j + two_m);
@@ -79,24 +79,11 @@ static void wigner_dmatel(mpc_t rop, int precision,
     // compute sine and cosine of theta/2
     mpfr_sin_cos(s, c, x, MPFR_RNDN);
 
-    if (sign == -1) {
-        mpfr_mul_d(s, s, -1,  MPFR_RNDN);
-    }
-
     mpfr_init2(pow1, precision);
     mpfr_init2(pow2, precision);
 
-    if (sign == -1) {
-
-        mpfr_pow_ui(pow1, c, Jmm, MPFR_RNDN);
-        mpfr_pow_ui(pow2, s, Jpm, MPFR_RNDN);
-
-    } else {   
-
-        mpfr_pow_ui(pow1, c, Jpm, MPFR_RNDN);
-        mpfr_pow_ui(pow2, s, Jmm, MPFR_RNDN);
-
-    }
+    mpfr_pow_ui(pow1, c, Jpm, MPFR_RNDN);
+    mpfr_pow_ui(pow2, s, Jmm, MPFR_RNDN);
 
     // create the D small function
     mpfr_mul(pow1, pow1, pow2, MPFR_RNDN);
@@ -104,12 +91,7 @@ static void wigner_dmatel(mpc_t rop, int precision,
     
     mpc_t mel;
     mpc_init2(mel, precision);
-
-    if (sign == -1) {
-        mpfr_set_d(x, (j+m) * (-phi), MPC_RNDNN);
-    } else {
-        mpfr_set_d(x, (j-m) * (+phi), MPC_RNDNN);
-    }
+    mpfr_set_d(x, (j-m) * (+phi), MPC_RNDNN);
 
     // exp(I * x)
     mpfr_sin_cos(mel->im, mel->re, x, MPC_RNDNN);
@@ -131,9 +113,7 @@ static void wigner_dmatel(mpc_t rop, int precision,
 // computes a coherent state in arbitrary precision
 static double complex coherent_state(int precision, dspin two_i, 
                                      dspin two_j1, dspin two_j2, dspin two_j3, dspin two_j4,
-                                     double f1, double t1, double f2, double t2, 
-                                     double f3, double t3, double f4, double t4,
-                                     int sign1, int sign2, int sign3, int sign4) {
+                                     double theta_phi[4][2]) {
 
     size_t d1_size, d2_size, d3_size, d4_size;
     d1_size = DIM(two_j1);
@@ -184,28 +164,28 @@ static double complex coherent_state(int precision, dspin two_i,
     #pragma omp for
     #endif
     for (int two_m1 = -two_j1; two_m1 <= two_j1; two_m1 += 2) {
-        wigner_dmatel(wd1[DIV2(two_m1+two_j1)], precision, two_j1, two_m1, f1, t1, sign1);
+        wigner_dmatel(wd1[DIV2(two_m1+two_j1)], precision, two_j1, two_m1, theta_phi[0][0], theta_phi[0][1]);
     }
 
     #ifdef USE_OMP
     #pragma omp for
     #endif
     for (int two_m2 = -two_j2; two_m2 <= two_j2; two_m2 += 2) {
-        wigner_dmatel(wd2[DIV2(two_m2+two_j2)], precision, two_j2, two_m2, f2, t2, sign2);
+        wigner_dmatel(wd2[DIV2(two_m2+two_j2)], precision, two_j2, two_m2, theta_phi[1][0], theta_phi[1][1]);
     }
 
     #ifdef USE_OMP
     #pragma omp for
     #endif
     for (int two_m3 = -two_j3; two_m3 <= two_j3; two_m3 += 2) {
-        wigner_dmatel(wd3[DIV2(two_m3+two_j3)], precision, two_j3, two_m3, f3, t3, sign3);
+        wigner_dmatel(wd3[DIV2(two_m3+two_j3)], precision, two_j3, two_m3, theta_phi[2][0], theta_phi[2][1]);
     }
 
     #ifdef USE_OMP
     #pragma omp for
     #endif
     for (int two_m4 = -two_j4; two_m4 <= two_j4; two_m4 += 2) {
-        wigner_dmatel(wd4[DIV2(two_m4+two_j4)], precision, two_j4, two_m4, f4, t4, sign4);
+        wigner_dmatel(wd4[DIV2(two_m4+two_j4)], precision, two_j4, two_m4, theta_phi[3][0], theta_phi[3][1]);
     }
 
     #ifdef USE_OMP
@@ -302,6 +282,8 @@ static double complex coherent_state(int precision, dspin two_i,
     }
 
     double complex ret;
+
+    // FIXME: change to normalization factor sqrt(DIM(two_i))
     ret = DIM(two_i) * mpc_get_dc(csm, MPC_RNDNN);
 
     mpc_clear(csm);
@@ -312,7 +294,7 @@ static double complex coherent_state(int precision, dspin two_i,
 
 sl2cfoam_cvector sl2cfoam_coherentstate_range(sl2cfoam_dspin two_js[4],
                                               sl2cfoam_dspin two_i_min, sl2cfoam_dspin two_i_max,
-                                              double theta_phi[4][2], sl2cfoam_cs_link inout[4]) {
+                                              double theta_phi[4][2]) {
 
     // check intertwiners range
     dspin two_i_min_allowed, two_i_max_allowed;                                                               
@@ -322,22 +304,6 @@ sl2cfoam_cvector sl2cfoam_coherentstate_range(sl2cfoam_dspin two_js[4],
     if (two_i_min < two_i_min_allowed || two_i_max > two_i_max_allowed) {
         warning("intertwiner range must be in [%d %d]", DIV2(two_i_min_allowed), DIV2(two_i_max_allowed));
         return NULL;
-    }
-
-    double t[4];
-    double f[4];
-
-    // fix the right convention for orientation
-    for (int s = 0; s < 4; s++) {
-
-        if (inout[s] == LINK_IN) {
-            t[s] = M_PI - theta_phi[s][0];
-            f[s] = M_PI + theta_phi[s][1];
-        } else {
-            t[s] = theta_phi[s][0];
-            f[s] = theta_phi[s][1];
-        }	
-
     }
 
     // compute and put in vector
@@ -353,8 +319,7 @@ sl2cfoam_cvector sl2cfoam_coherentstate_range(sl2cfoam_dspin two_js[4],
 
         cs = coherent_state(precision, two_i, 
                             two_js[0], two_js[1], two_js[2], two_js[3],
-                            f[0], t[0], f[1], t[1], f[2], t[2], f[3], t[3],
-                            (int)inout[0], (int)inout[1], (int)inout[2], (int)inout[3]);
+                            theta_phi);
 
         vector_set(cs, csv, DIV2(two_i-two_i_min));
 
@@ -365,13 +330,12 @@ sl2cfoam_cvector sl2cfoam_coherentstate_range(sl2cfoam_dspin two_js[4],
 }
 
 sl2cfoam_cvector sl2cfoam_coherentstate_fullrange(sl2cfoam_dspin two_js[4], 
-                                                  double theta_phi[4][2], 
-                                                  sl2cfoam_cs_link inout[4]) {
+                                                  double theta_phi[4][2]) {
 
     dspin two_i_min, two_i_max;                                                               
     two_i_min = (dspin) max(abs(two_js[0]-two_js[1]), abs(two_js[2]-two_js[3]));
     two_i_max = (dspin) min(two_js[0]+two_js[1], two_js[2]+two_js[3]);
 
-    return sl2cfoam_coherentstate_range(two_js, two_i_min, two_i_max, theta_phi, inout);
+    return sl2cfoam_coherentstate_range(two_js, two_i_min, two_i_max, theta_phi);
 
 }

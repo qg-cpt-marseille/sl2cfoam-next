@@ -160,12 +160,25 @@ void sl2cfoam_init_conf(char* root_folder, double Immirzi, struct sl2cfoam_confi
     // enable OMP parallelization by default
     OMP_PARALLELIZE = true;
 
-    #ifdef USE_MPI
+    // disable builtin threading of BLAS libraries
+    #ifdef USE_MKL
+
+    mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
+
+    #elif USE_SYSBLAS
+
+    #ifdef OPENBLAS_THREAD
+    openblas_set_num_threads(1)
+    #endif
+
+    #endif
 
     // if library is compiled for MPI
     // initialize MPI if it's not already initialized
     // needed for using as shared library
     // runs on a single node if not called with mpirun
+    #ifdef USE_MPI
+
     int mpi_initialized;
     MPI_Initialized(&mpi_initialized);
     if (!mpi_initialized) {

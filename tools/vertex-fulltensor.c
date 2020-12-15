@@ -126,11 +126,7 @@ int main(int argc, char **argv) {
 
 	sl2cfoam_init_conf(folder, Immirzi, &libconf);
 
-    MPI_MASTERONLY_DO printf("Computing and storing full range tensor...\n");
-
     sl2cfoam_vertex_fullrange(two_js, Dl, TENSOR_RESULT_STORE);
-
-    MPI_MASTERONLY_DO printf("done.\n");
 
     sl2cfoam_free();
 

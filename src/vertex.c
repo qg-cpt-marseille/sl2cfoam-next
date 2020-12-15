@@ -680,38 +680,11 @@ MPI_MASTERONLY_END
     // if there are enough enough shells to compute then
     // parallelize over the ls
     // otherwise parallelize internal 15j and DGEMMs
+    // TODO: MKL is set to SEQUENTIAL in any case because of strange
+    //       bug with the threaded version
     bool parallel_ls = true;
     int nthreads = omp_get_max_threads();
     if (ls_todo_size < nthreads) parallel_ls = false;
-
-    ///////////////////////////////////////////////////////////////
-    // disable builtin threading if parallelizing over shells
-    #ifdef USE_MKL
-
-    #ifndef USE_OMP
-    mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
-    #else
-
-    if (!OMP_PARALLELIZE || parallel_ls) mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
-    else { mkl_set_threading_layer(MKL_THREADING_GNU); mkl_set_num_threads(nthreads); }
-
-    #endif // OMP
-
-    #elif USE_SYSBLAS
-    #ifdef OPENBLAS_THREAD
-
-    #ifndef USE_OMP
-    openblas_set_num_threads(1)
-    #else
-
-    if (!OMP_PARALLELIZE || parallel_ls) openblas_set_num_threads(1);
-    else openblas_set_num_threads(nthreads);
-
-    #endif // OMP
-
-    #endif
-    #endif
-    ///////////////////////////////////////////////////////////////
 
     MPI_MASTERONLY_DO verb(SL2CFOAM_VERBOSE_HIGH, "Assembling amplitudes...\n");
     MPI_MASTERONLY_DO TIC();
@@ -841,6 +814,7 @@ MPI_MASTERONLY_END
                 w15j *= real_negpow(jl_sum + two_i1 + two_k2 + two_k3 + two_k4 + two_k5);
 
                 // add dimensions
+                // FIXME: add normalization factor sqrt(DIM(two_i1))
                 w15j *= DIM(two_k2) * DIM(two_k3) * DIM(two_k4) * DIM(two_k5);
 
                 TENSOR_SET(w15j, w15j_tensor, 5, DIV2(two_i1-two_i1_min), DIV2(two_k5-two_k5_min), 

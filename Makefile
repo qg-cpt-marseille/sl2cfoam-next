@@ -56,8 +56,8 @@ BLAS_CFLAGS = -DUSE_BLASFEO -I$(BLASFEODIR)/include -I$(BLASFEODIR)/netlib/cblas
 BLAS_LDFLAG = -L$(BLASFEODIR)/lib 
 BLAS_LDLIBS = -lblasfeo -lgfortran -lblas -lpthread
 else ifeq ($(BLAS), $(MKL))
-BLAS_CFLAGS = -DMKL_DIRECT_CALL -DUSE_MKL -I$(MKLROOT)/include/
-BLAS_LDLIBS = -Wl,--no-as-needed -lmkl_rt -lpthread -ldl 
+BLAS_CFLAGS = -DUSE_MKL -I$(MKLROOT)/include/ -DMKL_DIRECT_CALL
+BLAS_LDLIBS = -Wl,--no-as-needed -lmkl_rt -lpthread -ldl
 else
 $(error Wrong BLAS vendor selected)
 endif

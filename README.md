@@ -40,7 +40,7 @@ You can provide flags for GCC or the linker using the option `ADD_CFLAGS=...` af
 
 ## Usage (C interface)
 
-See `src/sl2cfoam.h`.
+See `inc/sl2cfoam.h`.
 
 ## Usage (Julia interface)
 

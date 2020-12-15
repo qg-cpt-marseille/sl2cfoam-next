@@ -89,11 +89,9 @@ int main(int argc, char **argv) {
 
 	sl2cfoam_init_conf(folder, Immirzi, &libconf);
 
-    MPI_MASTERONLY_DO printf("Computing a single amplitude...\n");
-
     double a = sl2cfoam_vertex_amplitude(two_js, two_is, Dl);
 
-    MPI_MASTERONLY_DO printf("done. Result = %.12g\n", a);
+    MPI_MASTERONLY_DO printf("%.12g\n", a);
 
     sl2cfoam_free();
 

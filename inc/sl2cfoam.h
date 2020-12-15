@@ -216,22 +216,15 @@ sl2cfoam_dmatrix sl2cfoam_b4_accurate(sl2cfoam_dspin two_j1, sl2cfoam_dspin two_
 // Coherent states functions.
 ///////////////////////////////////////////////////////////////////////////
 
-// Orientations of the links into a coherent state.
-typedef enum sl2cfoam_cs_link {
-    LINK_IN  = -1,
-    LINK_OUT = +1
-} sl2cfoam_cs_link;
-
 // For given spins and range of intertwiners, computes a (normalized) coherent state vector 
-// given spins, the Euler angles (theta, phi) and the orientation (in/out) of the 4 normals.
+// corresponding to the spherical angles (theta, phi) of the four normals.
 sl2cfoam_cvector sl2cfoam_coherentstate_range(sl2cfoam_dspin two_js[4],
                                               sl2cfoam_dspin two_i_min, sl2cfoam_dspin two_i_max,
-                                              double theta_phi[4][2], sl2cfoam_cs_link inout[4]);
+                                              double theta_phi[4][2]);
 
 // Computes a coherent state vector for all allowed intertwiners.
 sl2cfoam_cvector sl2cfoam_coherentstate_fullrange(sl2cfoam_dspin two_js[4], 
-                                                  double theta_phi[4][2],
-                                                  sl2cfoam_cs_link inout[4]);
+                                                  double theta_phi[4][2]);
 
 
 ///////////////////////////////////////////////////////////////////////////

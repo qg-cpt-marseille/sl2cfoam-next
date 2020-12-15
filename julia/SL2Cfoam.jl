@@ -10,7 +10,7 @@ export Spin, dim, intertwiner_range,
        Vertex, Boosters, CoherentState,
        vertex_amplitude, vertex_compute, vertex_load,
        boosters_compute, boosters_load, b4_compute,
-       LinkIn, LinkOut, coherentstate_compute,
+       coherentstate_compute,
        contract
 
 const clib = "libsl2cfoam"
@@ -416,18 +416,15 @@ mutable struct CoherentState
 
 end
 
-"Orientation of the links for a coherent state."
-@enum CsLink LinkOut=+1 LinkIn=-1
-
 "Computes a vector of coefficients of (normalized) Livine-Speziale coherent states.
 Angles are passed in a 4x2 matrix (4 normals x (theta, phi))."
-function coherentstate_compute(js, angles, inout::NTuple{4, CsLink})
+function coherentstate_compute(js, angles)
 
     check_cinit()
     check_spins(js, 4)
 
     cptr = ccall((:sl2cfoam_coherentstate_fullrange, clib), Ptr{ComplexF64}, 
-                 (Ref{Cint}, Ref{Cdouble}, Ref{NTuple{4,Int32}}), ctwo.(js), Float64.(transpose(angles)), Cint.(inout))
+                 (Ref{Cint}, Ref{Cdouble}), ctwo.(js), Float64.(transpose(angles)))
 
     _, size = intertwiner_range(js...) 
 
@@ -435,14 +432,14 @@ function coherentstate_compute(js, angles, inout::NTuple{4, CsLink})
 
 end
 
-function coherentstate_compute(js, angles, inout::NTuple{4, CsLink}, irange)
+function coherentstate_compute(js, angles, irange)
 
     check_cinit()
     check_spins(js, 4)
 
     cptr = ccall((:sl2cfoam_coherentstate_range, clib), Ptr{ComplexF64}, 
-                 (Ref{Cint}, Cint, Cint, Ref{Cdouble}, Ref{NTuple{4,Int32}}),
-                 ctwo.(js), ctwo(irange[1]), ctwo(irange[2]), Float64.(transpose(angles)), Cint.(inout))
+                 (Ref{Cint}, Cint, Cint, Ref{Cdouble}),
+                 ctwo.(js), ctwo(irange[1]), ctwo(irange[2]), Float64.(transpose(angles)))
 
     size = Int(irange[2] - irange[1]) + 1
 
