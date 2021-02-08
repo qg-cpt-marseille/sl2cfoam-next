@@ -1,13 +1,13 @@
 QUIET ?= @
 
-PAR_CFLAGS = -DUSE_OMP
+CMD_CFLAGS = -DUSE_OMP
 
 # OMP is enabled by default
 # add 'OMP=0' to make call to disable it
 OMP = 1
 
 ifeq ($(OMP), 0)
-PAR_CFLAGS = 
+CMD_CFLAGS = 
 endif
 
 # MPI is disabled by default
@@ -16,9 +16,17 @@ MPI = 0
 
 ifeq ($(MPI), 1)
 CC = mpicc
-PAR_CFLAGS += -DUSE_MPI
+CMD_CFLAGS += -DUSE_MPI
 else
 CC = gcc
+endif
+
+# IO (storing tensors) is enabled by default
+# add 'IO=0' to make call to disable it
+IO = 1
+
+ifeq ($(IO), 0)
+CMD_CFLAGS += -DNO_IO
 endif
 
 AR = ar
@@ -56,7 +64,7 @@ BLAS_CFLAGS = -DUSE_BLASFEO -I$(BLASFEODIR)/include -I$(BLASFEODIR)/netlib/cblas
 BLAS_LDFLAG = -L$(BLASFEODIR)/lib 
 BLAS_LDLIBS = -lblasfeo -lgfortran -lblas -lpthread
 else ifeq ($(BLAS), $(MKL))
-BLAS_CFLAGS = -DUSE_MKL -I$(MKLROOT)/include/ -DMKL_DIRECT_CALL
+BLAS_CFLAGS = -DUSE_MKL -I$(MKLROOT)/include/ -DMKL_ILP64
 BLAS_LDLIBS = -Wl,--no-as-needed -lmkl_rt -lpthread -ldl
 else
 $(error Wrong BLAS vendor selected)
@@ -67,10 +75,10 @@ endif
 # call 'make target DEBUG=1' to compile in debug mode
 # set additional flags for the compiler by passing var ADD_CFLAGS=...
 ifeq ($(DEBUG), 1)
-CFLAGS = -std=gnu11 -fopenmp -Wall -g -Og -fPIC $(ADD_CFLAGS) $(BLAS_CFLAGS) $(PAR_CFLAGS) \
+CFLAGS = -std=gnu11 -fopenmp -Wall -g -Og -fPIC $(ADD_CFLAGS) $(BLAS_CFLAGS) $(CMD_CFLAGS) \
          -I$(WIGDIR)/inc -I$(FASTWIGDIR)/inc -I$(EXTDIR) -Iinc -Isrc -DDEBUG_ON=1  # debug
 else
-CFLAGS = -std=gnu11 -fopenmp -O3 -fPIC -march=native -fno-math-errno $(ADD_CFLAGS) $(BLAS_CFLAGS) $(PAR_CFLAGS) \
+CFLAGS = -std=gnu11 -fopenmp -O3 -fPIC -march=native -fno-math-errno $(ADD_CFLAGS) $(BLAS_CFLAGS) $(CMD_CFLAGS) \
          -I$(WIGDIR)/inc -I$(FASTWIGDIR)/inc -I$(EXTDIR) -Iinc -Isrc -DDEBUG_OFF=1 # optimized
 endif
 
@@ -82,7 +90,7 @@ ARFLAGS = rcs
 
 INCS = src/utils.h src/jsymbols.h src/verb.h
 
-_OBJS = sl2cfoam.o setup.o vertex.o boosters.o folders.o coherentstates.o dsmall.o \
+_OBJS = sl2cfoam.o setup.o vertex.o boosters.o coherentstates.o dsmall.o \
         integration_gk.o integration_qagp.o b4.o b4_qagp.o cgamma.o
 
 _TESTS = lib_test tensor_test dsmall_test integration_test b4_test

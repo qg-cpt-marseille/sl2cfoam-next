@@ -95,6 +95,7 @@ void sl2cfoam_set_verbosity(int verbosity);
 void sl2cfoam_set_accuracy(int accuracy);
 
 // Sets the Immirzi-Barbero parameter at runtime.
+// WARNING: this function is not thread-safe.
 void sl2cfoam_set_Immirzi(double Immirzi);
 
 // Call this function when finished using the library

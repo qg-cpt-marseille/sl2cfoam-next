@@ -248,7 +248,8 @@ double sl2cfoam_gk_grid(int intervals, double* ys, double* ms,
     long double res_kronrod = 0.0;
 
     // contract
-    // TODO: verify if long double is needed
+    // TODO: verify if compensated summation (long double) is needed
+    //       probably yes...
     for (int i = 0; i < nxs; i++) {
         res_kronrod += (long double)(ys[i] * ms[i] * wgks[i]);
     }

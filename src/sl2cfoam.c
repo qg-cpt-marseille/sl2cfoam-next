@@ -36,8 +36,10 @@ char* DATA_ROOT;
 // global full configuration object
 struct sl2cfoam_config CONFIG;
 
-// global Immirzi parameter
+// global Immirzi parameter and related folders
 double IMMIRZI;
+char* DIR_BOOSTERS;
+char* DIR_AMPLS;
 
 // global verbosity level
 int VERBOSITY;
@@ -98,7 +100,60 @@ void sl2cfoam_set_accuracy(int accuracy) {
 void sl2cfoam_set_Immirzi(double Immirzi) {
 
     not_thread_safe();
+
+    MPI_FUNC_INIT();
+    
     IMMIRZI = Immirzi;
+
+    // update/create folder structure
+
+    int len = strlen(DATA_ROOT) + 256;
+    if (DIR_BOOSTERS == NULL || DIR_AMPLS == NULL) {
+
+        DIR_BOOSTERS = (char*)malloc(len*sizeof(char));
+        DIR_AMPLS = (char*)malloc(len*sizeof(char));
+
+    }
+
+    strcpy(DIR_BOOSTERS, DATA_ROOT);
+    strcpy(DIR_AMPLS, DATA_ROOT);
+
+    char tmp[256];
+
+    sprintf(tmp, "/vertex/immirzi_%.3f/boosters", IMMIRZI);
+    strcat(DIR_BOOSTERS, tmp);
+
+    sprintf(tmp, "/vertex/immirzi_%.3f/amplitudes", IMMIRZI);
+    strcat(DIR_AMPLS, tmp);
+
+    // check/create directories
+
+MPI_MASTERONLY_START
+
+    char dir_vimm[len];
+
+    strcpy(dir_vimm, DATA_ROOT);
+    strcat(dir_vimm, "/vertex");
+    if (mkdir(dir_vimm, 0755) == -1) {
+        if (errno != EEXIST) { error("cannot create directory %s: %s", dir_vimm, strerror(errno)); }
+    }
+
+    strcpy(dir_vimm, DATA_ROOT);
+    sprintf(tmp, "/vertex/immirzi_%.3f", IMMIRZI);
+    strcat(dir_vimm, tmp);
+    if (mkdir(dir_vimm, 0755) == -1) {
+        if (errno != EEXIST) { error("cannot create directory %s: %s", dir_vimm, strerror(errno)); }
+    }
+
+    if (mkdir(DIR_BOOSTERS, 0755) == -1) {
+        if (errno != EEXIST) { error("cannot create boosters directory: %s %s", DIR_BOOSTERS, strerror(errno)); }
+    }
+
+    if (mkdir(DIR_AMPLS, 0755) == -1) {
+        if (errno != EEXIST) { error("cannot create amplitudes directory: %s", strerror(errno)); }
+    }
+
+MPI_MASTERONLY_END
 
 }
 

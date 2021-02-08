@@ -17,6 +17,7 @@
  *  along with SL2CFOAM-NEXT. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
 #include <complex.h>
 #include <mpfr.h>
 #include <mpc.h>
@@ -282,9 +283,7 @@ static double complex coherent_state(int precision, dspin two_i,
     }
 
     double complex ret;
-
-    // FIXME: change to normalization factor sqrt(DIM(two_i))
-    ret = DIM(two_i) * mpc_get_dc(csm, MPC_RNDNN);
+    ret = sqrt(DIM(two_i)) * mpc_get_dc(csm, MPC_RNDNN);
 
     mpc_clear(csm);
 

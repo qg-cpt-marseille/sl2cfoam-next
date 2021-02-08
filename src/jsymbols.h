@@ -59,9 +59,6 @@ for (dspin two_x = two_x_absmin; two_x <= two_x_absmax; two_x += 2) { \
 
 // Computes the five 6j tensors in the indices ls and ks and x. Look at the 15j function
 // below for the order and the spins of the symbols.
-// TODO: with MPI some time can be saved by just computing needed symbols...
-//       but the time spent here is non-significant compared to vertex assembly
-//       so it is probably not worth the effort
 static inline void sl2cfoam_6j_tensors_vertex(dspin two_js[10], dspin two_i1_min, dspin two_i1_max, dspin two_Dl,
                                               tensor_ptr(6j_4)* sjA, tensor_ptr(6j_5)* sjB, tensor_ptr(6j_6)* sjC, 
                                               tensor_ptr(6j_5)* sjD, tensor_ptr(6j_4)* sjE, dspin bounds[10]) {
@@ -303,7 +300,6 @@ static inline double sl2cfoam_w15j(dspin two_j12, dspin two_j13, dspin two_j14, 
 
     long double res = 0;
 
-    // TODO: continue if 0, maybe a cutoff is better?
     double w6j_1, w6j_2, w6j_3, w6j_4, w6j_5;
 
     for (two_x = two_x_min; two_x <= two_x_max; two_x += 2) {

@@ -17,6 +17,7 @@
  *  along with SL2CFOAM-NEXT. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
 #include <complex.h>
 #include <quadmath.h>
 #include <omp.h>
@@ -80,7 +81,6 @@ static void dsmall_prod_qagp(__complex128 ds[], __float128 xs[], size_t N, void*
 
 }
 
-// TODO: consider parallelize this loop (but it's probably faster than parallel latency)
 static void dsmall_measure_qagp(__complex128 ds[], __float128 xs[], size_t N, void* params) {
 
     const __float128 k =  M_1_PIq / 16.0Q;
@@ -435,7 +435,8 @@ sl2cfoam_dmatrix sl2cfoam_b4_accurate(dspin two_j1, dspin two_j2, dspin two_j3, 
                 double w4jl = sl2cfoam_w4jm(two_l1, two_l2, two_l3, two_l4,
                                             two_p1, two_p2, two_p3, two_p4, two_k);
 
-                TENSOR_SET(w4jj * w4jl, wtens, 6, ii, ki, DIV2(two_p1+two_j1), DIV2(two_p2+two_j2), DIV2(two_p3+two_j3), DIV2(two_p4+two_j4));
+                TENSOR_SET(sqrt(DIM(two_i) * DIM(two_k)) * w4jj * w4jl, wtens, 6, ii, ki, 
+                           DIV2(two_p1+two_j1), DIV2(two_p2+two_j2), DIV2(two_p3+two_j3), DIV2(two_p4+two_j4));
 
         } // i
         } // k

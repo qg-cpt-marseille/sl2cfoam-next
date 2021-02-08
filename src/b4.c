@@ -186,7 +186,7 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
         error("wrong accuracy value");
     }
 
-    // TODO: study this criterion
+    // TODO: better study of this criterion
     //       maybe no less than 2 intervals (~120 points) to begin with?
     double glmax = SPIN(two_l_max) * fmax(1.0, sqrt(IMMIRZI));
     int intervals = max(1, floor(interval_mult * sqrt(glmax)));
@@ -591,8 +591,8 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
         int ii = DIV2(two_i-two_i_min);
         int ki = DIV2(two_k-two_k_min);
 
-        // FIXME: add normalization factor sqrt(DIM(two_i))
-        matrix_get(b4, dimi, ii, ki) += matrix_get(b4_thread, dimi, ii, ki);
+        matrix_get(b4, dimi, ii, ki) += sqrt(DIM(two_i) * DIM(two_k)) 
+                                        * matrix_get(b4_thread, dimi, ii, ki);
 
     } // i
     } // k

@@ -58,11 +58,11 @@ int main(int argc, char **argv) {
     // values depend on the Y-map
 
     #ifdef RHO_GJ
-    double ampls[NTEST] = { 6.17259170394e-09, 5.33694074629e-09, -7.26116697167e-10 };
+    double ampls[NTEST] = { 1.38023346474e-08, 1.60108222389e-08, -1.08917504575e-08 };
     #endif
 
     #ifdef RHO_GJP1
-    double ampls[NTEST] = { 8.76263107783e-11, 7.19679864345e-11, -1.0176125168e-11 };
+    double ampls[NTEST] = { 1.95938387518e-10, 2.15903959304e-10, -1.5264187752e-10 };
     #endif
     
     // library conf

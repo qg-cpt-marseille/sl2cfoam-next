@@ -54,13 +54,15 @@ extern "C" {
 extern char* DATA_ROOT;
 
 ///////////////////////////////////////////////////////////////
-// Barbero-Immirzi parameter. Set at library initialization.
+// Barbero-Immirzi parameter and related folders.
 ///////////////////////////////////////////////////////////////
 
 extern double IMMIRZI;
+extern char* DIR_BOOSTERS;
+extern char* DIR_AMPLS;
 
 ///////////////////////////////////////////////////////////////
-// Accuracy parameter. Set at library initialization.
+// Accuracy parameter.
 // This define also the default bits of precision.
 ///////////////////////////////////////////////////////////////
 
@@ -69,7 +71,7 @@ extern int MPBITS;
 
 ///////////////////////////////////////////////////////////////
 // Controls OMP parallelization. 
-// Parallelizatuion is ENABLED at library initialization.
+// Parallelization is ENABLED at library initialization.
 ///////////////////////////////////////////////////////////////
 
 extern bool OMP_PARALLELIZE;

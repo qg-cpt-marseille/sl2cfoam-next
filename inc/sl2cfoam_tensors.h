@@ -57,7 +57,7 @@ extern "C" {
 #define sl2cfoam_aligned_calloc2(nbytes) mkl_calloc(nbytes, sizeof(char), MEMORY_ALIGNMENT)
 #define sl2cfoam_aligned_free(buf) mkl_free(buf)
 #else
-// FIXME: I get the wrong result if I allocate memory with aligned_alloc
+// TODO: I get wrong results if I allocate memory with aligned_alloc
 //        and ALIGNMENT > 16 bytes on my laptop... this is weird
 //#define sl2cfoam_aligned_alloc(nel) aligned_alloc(MEMORY_ALIGNMENT, nel * sizeof(double))
 #define sl2cfoam_aligned_alloc(nel) malloc(nel * sizeof(double))
@@ -75,7 +75,6 @@ extern "C" {
 // We call a multi-dimensional array a 'tensor'.
 // Indices are integers starting from 0.
 // Entries are stored in COLUMN-MAJOR ordering.
-// TODO: prefix all macros with sl2cfoam_? uff...
 ////////////////////////////////////////////////////////////////////
 
 // Macros to set elements of an array of fixed length.
@@ -112,7 +111,6 @@ extern "C" {
 #define __TAG_BYTES 1024
 
 // Inits the tensor type given name and number of keys (indices).
-// FIXME: change dims type from 32 to 64 bits
 //
 // the fields are:
 // num_keys: number of dimensions
@@ -123,7 +121,7 @@ extern "C" {
 #define TENSOR_INIT(name, nkeys)          \
 typedef struct sl2cfoam_tensor_##name {   \
     uint8_t num_keys;                     \
-    uint32_t dims[nkeys];                 \
+    size_t dims[nkeys];                   \
     ptrdiff_t strides[nkeys];             \
     size_t dim;                           \
     double* d;                            \
@@ -195,10 +193,10 @@ typedef struct sl2cfoam_tensor_##name {   \
 // The header contain the dimensions and the tag.
 #define TENSOR_STORE(t, path)                                                 \
     {                                                                         \
-    size_t __dim_bytes = sizeof(uint32_t) * __NUM_KEYS_MAX;                   \
+    size_t __dim_bytes = sizeof(size_t) * __NUM_KEYS_MAX;                     \
     size_t __header_bytes = __dim_bytes + __TAG_BYTES;                        \
     uint8_t* __tensor_header = calloc(__header_bytes, sizeof(uint8_t));       \
-    memcpy(__tensor_header, t->dims, sizeof(uint32_t) * t->num_keys);         \
+    memcpy(__tensor_header, t->dims, sizeof(size_t) * t->num_keys);           \
     memcpy(__tensor_header + __dim_bytes, t->tag, __TAG_BYTES);               \
     FILE *ptr;                                                                \
     ptr = fopen(path, "wbx");                                                 \
@@ -235,7 +233,7 @@ store_##t##_end:                                                              \
 // It must be later deallocated with TENSOR_FREE(t).
 #define TENSOR_LOAD(name, t, nkeys, path)                                     \
     {                                                                         \
-    size_t __header_bytes = sizeof(uint32_t) * __NUM_KEYS_MAX + __TAG_BYTES;  \
+    size_t __header_bytes = sizeof(size_t) * __NUM_KEYS_MAX + __TAG_BYTES;    \
     FILE *ptr;                                                                \
     ptr = fopen(path,"rb");                                                   \
     if (ptr == NULL) {                                                        \
@@ -250,8 +248,8 @@ store_##t##_end:                                                              \
     t->num_keys = nkeys;                                                      \
     t->tag = calloc(__TAG_BYTES, sizeof(uint8_t));                            \
     size_t ret;                                                               \
-    ret = fread(t->dims, sizeof(uint32_t), nkeys, ptr);                       \
-    fseek(ptr, sizeof(uint32_t) * __NUM_KEYS_MAX, SEEK_SET);                  \
+    ret = fread(t->dims, sizeof(size_t), nkeys, ptr);                         \
+    fseek(ptr, sizeof(size_t) * __NUM_KEYS_MAX, SEEK_SET);                    \
     ret += fread(t->tag, sizeof(uint8_t), __TAG_BYTES, ptr);                  \
     if (ret != t->num_keys + __TAG_BYTES) {                                   \
         warning("error reading tensor header, err: %s", strerror(errno));     \

@@ -23,7 +23,6 @@
 #include "common.h"
 #include "utils.h"
 #include "mpi_utils.h"
-#include "folders.h"
 #include "sl2cfoam.h"
 #include "sl2cfoam_tensors.h"
 #include "boosters.h"
@@ -39,14 +38,13 @@ const char* fn_template = "vertex__%d-%d-%d-%d-%d-%d-%d-%d-%d-%d__i1_%d-%d__i2_%
 const char* fn_template_fullrange = "vertex__%d-%d-%d-%d-%d-%d-%d-%d-%d-%d__fullrange__imm-%.3f__dl-%d.sl2t";
 
 // build the file path of a vertex tensor (checking for fullrange case)
-static void build_vertex_path(char* path, struct sl2cfoam_data_folders* df,  
-                                          sl2cfoam_dspin two_js[10],
+static void build_vertex_path(char* path,  sl2cfoam_dspin two_js[10],
                                           sl2cfoam_dspin two_i1_min, sl2cfoam_dspin two_i1_max, 
                                           sl2cfoam_dspin two_i2_min, sl2cfoam_dspin two_i2_max, 
                                           sl2cfoam_dspin two_i3_min, sl2cfoam_dspin two_i3_max, 
                                           sl2cfoam_dspin two_i4_min, sl2cfoam_dspin two_i4_max, 
                                           sl2cfoam_dspin two_i5_min, sl2cfoam_dspin two_i5_max, 
-                                          int Dl, double Immirzi) {
+                                          int Dl) {
 
     dspin two_j12, two_j13, two_j14, two_j15, two_j23,
           two_j24, two_j25, two_j34, two_j35, two_j45;
@@ -72,7 +70,7 @@ static void build_vertex_path(char* path, struct sl2cfoam_data_folders* df,
 
         sprintf(filename, fn_template_fullrange, two_js[0], two_js[1], two_js[2], two_js[3], two_js[4],
                                                  two_js[5], two_js[6], two_js[7], two_js[8], two_js[9],
-                                                 Immirzi, Dl);
+                                                 IMMIRZI, Dl);
 
     } else {
 
@@ -83,27 +81,26 @@ static void build_vertex_path(char* path, struct sl2cfoam_data_folders* df,
                                        two_i3_min, two_i3_max, 
                                        two_i4_min, two_i4_max, 
                                        two_i5_min, two_i5_max,
-                                       Immirzi, Dl);
+                                       IMMIRZI, Dl);
 
     }
 
-    strcpy(path, df->vertex_imm_ampl);
+    strcpy(path, DIR_AMPLS);
     strcat(path, "/");
     strcat(path, filename);
 
 }
 
 // build the file path of a vertex tensor (assuming fullrange)
-static void build_vertex_path_fullrange(char* path, struct sl2cfoam_data_folders* df,  
-                                                    sl2cfoam_dspin two_js[10], int Dl, double Immirzi) {
+static void build_vertex_path_fullrange(char* path, sl2cfoam_dspin two_js[10], int Dl) {
 
     char filename[512];
 
     sprintf(filename, fn_template_fullrange, two_js[0], two_js[1], two_js[2], two_js[3], two_js[4],
                                              two_js[5], two_js[6], two_js[7], two_js[8], two_js[9],
-                                             Immirzi, Dl);
+                                             IMMIRZI, Dl);
 
-    strcpy(path, df->vertex_imm_ampl);
+    strcpy(path, DIR_AMPLS);
     strcat(path, "/");
     strcat(path, filename);
 
@@ -378,15 +375,14 @@ MPI_MASTERONLY_START
 
     }
 
+#ifndef NO_IO
+
     // store if configured
     if (t_full != NULL && bitmask_has(tresult, TENSOR_RESULT_STORE)) {
 
-        struct sl2cfoam_data_folders* df = get_data_folders();
-        check_data_folders(df);
-
         // build path
-        char path[strlen(df->vertex_imm_ampl) + 512];
-        build_vertex_path_fullrange(path, df, two_js, Dl, IMMIRZI);
+        char path[strlen(DIR_AMPLS) + 512];
+        build_vertex_path_fullrange(path, two_js, Dl);
 
         // check if the file already exists
         // if yes do not store again
@@ -396,9 +392,9 @@ MPI_MASTERONLY_START
             verb(SL2CFOAM_VERBOSE_HIGH, "[ Previously computed tensor has been found, not storing again. ]\n");
         }
 
-        free_data_folders(df);
-
     }
+
+#endif
 
     // return the result if configured (and master)
     if (bitmask_has(tresult, TENSOR_RESULT_RETURN))
@@ -462,9 +458,6 @@ sl2cfoam_tensor_vertex* sl2cfoam_vertex_range(dspin two_js[10],
 
     // spins look good
 
-    struct sl2cfoam_data_folders* df = get_data_folders();
-    check_data_folders(df);
-
     // result tensor
     tensor_ptr(vertex) t_range = NULL;
 
@@ -479,22 +472,23 @@ sl2cfoam_tensor_vertex* sl2cfoam_vertex_range(dspin two_js[10],
     dspin two_Dl_found = 0;
 
 MPI_MASTERONLY_START
+#ifndef NO_IO
 
     // check for computed tensors with lower or equal Dl
     
-    char path_found[strlen(df->vertex_imm_ampl) + 512];
+    char path_found[strlen(DIR_AMPLS) + 512];
 
     for (dspin two_dli = two_Dl; two_dli >= 0; two_dli -= 2) {
 
         int Dl_found = DIV2(two_dli);
 
-        build_vertex_path(path_found, df, two_js, 
-                                          two_i1_min, two_i1_max, 
-                                          two_i2_min, two_i2_max, 
-                                          two_i3_min, two_i3_max, 
-                                          two_i4_min, two_i4_max, 
-                                          two_i5_min, two_i5_max,
-                                          Dl_found, IMMIRZI);
+        build_vertex_path(path_found, two_js, 
+                                      two_i1_min, two_i1_max, 
+                                      two_i2_min, two_i2_max, 
+                                      two_i3_min, two_i3_max, 
+                                      two_i4_min, two_i4_max, 
+                                      two_i5_min, two_i5_max,
+                                      Dl_found);
 
         // check if requested tensor has already been computed
         if (file_exist(path_found)) {
@@ -512,6 +506,7 @@ MPI_MASTERONLY_START
 
     }
 
+#endif
 MPI_MASTERONLY_END
 
     #ifdef USE_MPI
@@ -814,8 +809,7 @@ MPI_MASTERONLY_END
                 w15j *= real_negpow(jl_sum + two_i1 + two_k2 + two_k3 + two_k4 + two_k5);
 
                 // add dimensions
-                // FIXME: add normalization factor sqrt(DIM(two_i1))
-                w15j *= DIM(two_k2) * DIM(two_k3) * DIM(two_k4) * DIM(two_k5);
+                w15j *= sqrt(DIM(two_i1) * DIM(two_k2) * DIM(two_k3) * DIM(two_k4) * DIM(two_k5));
 
                 TENSOR_SET(w15j, w15j_tensor, 5, DIV2(two_i1-two_i1_min), DIV2(two_k5-two_k5_min), 
                                                  DIV2(two_k4-two_k4_min), DIV2(two_k3-two_k3_min), 
@@ -913,6 +907,7 @@ MPI_MASTERONLY_END
     TENSOR_FREE(booster_4);
     TENSOR_FREE(booster_5);
     vector_free(xdims);
+    free(ls_todo);
 
     #ifdef USE_MPI
 
@@ -965,27 +960,29 @@ MPI_MASTERONLY_START
 
     }
 
+#ifndef NO_IO
+
     // store if configured
     if (bitmask_has(tresult, TENSOR_RESULT_STORE)) {
         
-        char path[strlen(df->vertex_imm_ampl) + 512];
-        build_vertex_path(path, df, two_js, 
-                                    two_i1_min, two_i1_max, 
-                                    two_i2_min, two_i2_max, 
-                                    two_i3_min, two_i3_max, 
-                                    two_i4_min, two_i4_max, 
-                                    two_i5_min, two_i5_max,
-                                    Dl, IMMIRZI);
+        char path[strlen(DIR_AMPLS) + 512];
+        build_vertex_path(path, two_js, 
+                                two_i1_min, two_i1_max, 
+                                two_i2_min, two_i2_max, 
+                                two_i3_min, two_i3_max, 
+                                two_i4_min, two_i4_max, 
+                                two_i5_min, two_i5_max,
+                                Dl);
 
         TENSOR_STORE(t_range, path);
 
     }
 
+#endif
+
 MPI_MASTERONLY_END
 
 tensor_return:
-
-    free_data_folders(df);
 
 MPI_MASTERONLY_START
 
@@ -1008,32 +1005,25 @@ sl2cfoam_tensor_vertex* sl2cfoam_vertex_range_load(sl2cfoam_dspin two_js[10],
                                                    sl2cfoam_dspin two_i5_min, sl2cfoam_dspin two_i5_max, 
                                                    int Dl) {
 
-    struct sl2cfoam_data_folders* df = get_data_folders();
-    check_data_folders(df);
     
-    char path[strlen(df->vertex_imm_ampl) + 512];
-    build_vertex_path(path, df, two_js, 
-                                two_i1_min, two_i1_max, 
-                                two_i2_min, two_i2_max, 
-                                two_i3_min, two_i3_max, 
-                                two_i4_min, two_i4_max, 
-                                two_i5_min, two_i5_max,
-                                Dl, IMMIRZI);
+    char path[strlen(DIR_AMPLS) + 512];
+    build_vertex_path(path, two_js, 
+                            two_i1_min, two_i1_max, 
+                            two_i2_min, two_i2_max, 
+                            two_i3_min, two_i3_max, 
+                            two_i4_min, two_i4_max, 
+                            two_i5_min, two_i5_max,
+                            Dl);
 
-    free_data_folders(df);
     return sl2cfoam_vertex_load(path);
 
 }
 
 sl2cfoam_tensor_vertex* sl2cfoam_vertex_fullrange_load(sl2cfoam_dspin two_js[10], int Dl) {
 
-    struct sl2cfoam_data_folders* df = get_data_folders();
-    check_data_folders(df);
+    char path[strlen(DIR_AMPLS) + 512];
+    build_vertex_path_fullrange(path, two_js, Dl);
 
-    char path[strlen(df->vertex_imm_ampl) + 512];
-    build_vertex_path_fullrange(path, df, two_js, Dl, IMMIRZI);
-
-    free_data_folders(df);
     return sl2cfoam_vertex_load(path);
 
 }

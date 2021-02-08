@@ -20,7 +20,6 @@
 #include <omp.h>
 
 #include "common.h"
-#include "folders.h"
 #include "error.h"
 #include "utils.h"
 #include "mpi_utils.h"
@@ -59,26 +58,27 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
 
     dspin two_Dl = (dspin)(2 * Dl);
 
-    // get folder from config
-    struct sl2cfoam_data_folders* df = get_data_folders();
-    check_data_folders(df);
+    // result tensor
+    tensor_ptr(boosters) b4t = NULL;
+
+    char path[strlen(DIR_BOOSTERS) + 256];
+
+    // if different Dl tensors are found
+    tensor_ptr(boosters) b4t_found;
+
+    bool found = false;
+    dspin two_Dl_found;
+    char path_found[strlen(DIR_BOOSTERS) + 256];
+
+#ifndef NO_IO
 
     // build filename
     char filename[256];
     sprintf(filename, boosters_fn, two_ja, two_jb, two_jc, two_jd, gf, IMMIRZI, Dl);
 
-    const char* folder = df->vertex_imm_boost;
-
-    // build path
-    char path[strlen(folder) + 256];
-    char path_found[strlen(folder) + 256];
-
-    strcpy(path, folder);
+    strcpy(path, DIR_BOOSTERS);
     strcat(path, "/");
     strcat(path, filename);
-
-    // result tensor
-    tensor_ptr(boosters) b4t = NULL;
 
     // check if tensor already exists
     // if yes return it
@@ -86,10 +86,6 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
         TENSOR_LOAD(boosters, b4t, 6, path);
         goto tensor_return;
     }
-
-    // check for tensors with same spin but different Dl
-    bool found = false;
-    dspin two_Dl_found;
 
     // go "up" from Dl+1 to DL_MAX then reset to 0 up to Dl (then stop)
 
@@ -99,7 +95,7 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
         // build filename
         sprintf(filename, boosters_fn, two_ja, two_jb, two_jc, two_jd, gf, IMMIRZI, dli);
 
-        strcpy(path_found, folder);
+        strcpy(path_found, DIR_BOOSTERS);
         strcat(path_found, "/");
         strcat(path_found, filename);
 
@@ -114,9 +110,9 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
 
     } while (found != true && dli != Dl);
 
-    // must compute (at least partially)
+#endif
 
-    tensor_ptr(boosters) b4t_found;
+    // must compute (at least partially)
 
     size_t ldim, idim, kdim_absmax;
 
@@ -246,7 +242,7 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
     //////////////////////////////////////////////////////////////////////
 
     // TODO: this can  be done more efficiently, but for a reasonable number
-    //       of shells (~10 or little more) the loops are ok..
+    //       of shells the loops are ok...
     long l_loops = CUBE(DIV2(two_Dl) + 1);
     dspin* ls_todo = (dspin*)calloc(l_loops, 4 * sizeof(dspin));
     size_t ls_todo_size = 0;
@@ -362,17 +358,20 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
        TENSOR_FREE(b4t_found); 
     }
 
-    #ifdef USE_MPI
+   #ifdef USE_MPI
 
-    // synchronize nodes to ensure the stored tensor
-    // is seen by all from now on
+    // TODO: better to broadcast or load from disk?
+    //       and probably the barrier is not needed
+
+    // broadcast the reduced tensor to all nodes
+    MPI_Bcast(b4t->d, b4t->dim, MPI_DOUBLE, MPI_MASTER, MPI_COMM_WORLD);
+
+    // ensure the stored tensor is seen by all from now on
     MPI_Barrier(MPI_COMM_WORLD);
 
     #endif
 
 tensor_return:
-
-    free_data_folders(df);
 
     return b4t;
     
@@ -402,28 +401,34 @@ void sl2cfoam_boosters_tensors_vertex(dspin two_js[10], int Dl,
 
     // compute all boosters and store the tensors
 
+    bool store = true;
+
+    #ifdef NO_IO
+    store = false;
+    #endif
+
     // booster 2
     MAP_SPINS_2(two_ja, two_jb, two_jc, two_jd, gf);
 
-    *b2 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, true);
+    *b2 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, store);
     b_two_i_mins[0] = max(abs(two_ja-two_jb), abs(two_jc-two_jd));
 
     // booster 3
     MAP_SPINS_3(two_ja, two_jb, two_jc, two_jd, gf);
 
-    *b3 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, true);
+    *b3 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, store);
     b_two_i_mins[1] = max(abs(two_ja-two_jb), abs(two_jc-two_jd));
 
     // booster 4
     MAP_SPINS_4(two_ja, two_jb, two_jc, two_jd, gf);
 
-    *b4 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, true);
+    *b4 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, store);
     b_two_i_mins[2] = max(abs(two_ja-two_jb), abs(two_jc-two_jd));
 
     // booster 5
     MAP_SPINS_5(two_ja, two_jb, two_jc, two_jd, gf);
 
-    *b5 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, true);
+    *b5 = sl2cfoam_boosters(gf, two_ja, two_jb, two_jc, two_jd, Dl, store);
     b_two_i_mins[3] = max(abs(two_ja-two_jb), abs(two_jc-two_jd));
 
 }
@@ -432,27 +437,19 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters_load(int gf,
                                                  dspin two_ja, dspin two_jb, dspin two_jc,  dspin two_jd, 
                                                  int Dl) {
 
-    // get folder from config
-    struct sl2cfoam_data_folders* df = get_data_folders();
-    check_data_folders(df);
-
     // build filename
     char filename[256];
     sprintf(filename, boosters_fn, two_ja, two_jb, two_jc, two_jd, gf, IMMIRZI, Dl);
 
-    const char* folder = df->vertex_imm_boost;
-
     // build path
-    char path[strlen(folder) + 256];
+    char path[strlen(DIR_BOOSTERS) + 256];
 
-    strcpy(path, folder);
+    strcpy(path, DIR_BOOSTERS);
     strcat(path, "/");
     strcat(path, filename);
 
     tensor_ptr(boosters) t;
     TENSOR_LOAD(boosters, t, 6, path);
-
-    free_data_folders(df);
 
     return t;
 

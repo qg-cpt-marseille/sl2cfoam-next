@@ -29,7 +29,6 @@
 #include <omp.h>
 
 #include "common.h"
-#include "folders.h"
 #include "sl2cfoam.h"
 #include "wigxjpf.h"
 #include "fastwigxj.h"
@@ -142,11 +141,18 @@ static inline void unload_fastwig_tables() {
 
 void sl2cfoam_init_conf(char* root_folder, double Immirzi, struct sl2cfoam_config* conf) {
 
+    // check root folder is accessible
+    DIR *d = opendir(root_folder);
+    if (d == NULL) error("error opening root folder");
+    closedir(d);
+
     DATA_ROOT = strdup(root_folder);
 
     memcpy(&CONFIG, conf, sizeof(struct sl2cfoam_config));
 
+    // set Immirzi and create folder structure
     sl2cfoam_set_Immirzi(Immirzi);
+
     sl2cfoam_set_verbosity(conf->verbosity);
     sl2cfoam_set_accuracy(conf->accuracy);
     
@@ -160,9 +166,13 @@ void sl2cfoam_init_conf(char* root_folder, double Immirzi, struct sl2cfoam_confi
     // enable OMP parallelization by default
     OMP_PARALLELIZE = true;
 
-    // disable builtin threading of BLAS libraries
+    // setup BLAS libraries
     #ifdef USE_MKL
 
+    // 64bit interface
+    mkl_set_interface_layer(MKL_INTERFACE_ILP64);
+
+    // disable builtin threading
     mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
 
     #elif USE_SYSBLAS
@@ -209,8 +219,12 @@ void sl2cfoam_free() {
     wig_table_free();
     unload_fastwig_tables();
 
+    // free paths
     free(DATA_ROOT);
+    free(DIR_BOOSTERS);
+    free(DIR_AMPLS);
     free(FASTWIG_6J_TABLE_PATH);
+    free(FASTWIG_3J_TABLE_PATH);
 
     #ifdef USE_MPI
 

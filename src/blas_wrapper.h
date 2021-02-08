@@ -31,8 +31,6 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////
 // Wrappers to BLAS functions of different libraries.
-// TODO: many routines of BLASFEO are defaulted to CBLAS
-//       it would be better to use full blasfeo API
 ////////////////////////////////////////////////////////////////////
 
 // BLAS libraries

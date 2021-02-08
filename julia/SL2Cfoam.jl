@@ -119,14 +119,18 @@ function cclear()
 
 end
 
+"Sets verbosity."
 function set_verbosity(v::Verbosity)
     @ccall clib.sl2cfoam_set_verbosity(v::Cint)::Cvoid
 end
 
+"Sets accuracy."
 function set_accuracy(a::Accuracy)
     @ccall clib.sl2cfoam_set_accuracy(a::Cint)::Cvoid
 end
 
+"Sets the Barbero-Immirzi parameter.
+WARNING: this function is not thread-safe."
 function set_Immirzi(Immirzi::Real)
 
     if Immirzi <= 0 throw(ArgumentError("Immirzi parameter must be strictly positive")) end
@@ -134,6 +138,7 @@ function set_Immirzi(Immirzi::Real)
 
 end
 
+"Enables or disables internal OMP parallelization."
 function set_OMP(enable::Bool)
 
     @ccall clib.sl2cfoam_set_omp(enable::Cbool)::Cvoid
@@ -152,7 +157,7 @@ check_spins(js, n) = if (ng = length(js)) != n; throw(ArgumentError("$n spins re
 # TODO: read tag data
 struct __C_tensor{N}
     num_keys :: Cuchar
-    dims     :: NTuple{N, Cuint}
+    dims     :: NTuple{N, Culong}
     strides  :: NTuple{N, Culong}
     dim      :: Culong
     d        :: Ptr{Cdouble}

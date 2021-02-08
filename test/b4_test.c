@@ -29,8 +29,6 @@
 #define check(name, cond) \
     if (!(cond)) { fprintf(stderr, "test '%s' failed\n", name); exit(EXIT_FAILURE); }
 
-const double Immirzi = 1.2;
-
 int main(int argc, char** argv) {
 
     dspin two_j1;
@@ -41,6 +39,8 @@ int main(int argc, char** argv) {
     dspin two_l2;
     dspin two_l3;
     dspin two_l4;
+
+    double IMMIRZI = 1.2;
 
     bool test_acc = false;
 
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
         two_l4 = 20;
         printf("Setting j = l = 10...\n");
 
-    } else if (argc == 9 || argc == 10) {
+    } else if (argc == 10 || argc == 11) {
 
         two_j1 = (dspin)atoi(argv[1]);
         two_j2 = (dspin)atoi(argv[2]);
@@ -67,10 +67,12 @@ int main(int argc, char** argv) {
         two_l3 = (dspin)atoi(argv[7]);
         two_l4 = (dspin)atoi(argv[8]);
 
-        if (argc == 10) test_acc = true;
+        sscanf(argv[9], "%lf", &IMMIRZI);
+
+        if (argc == 11) test_acc = true;
 
     } else {
-        error("Usage: %s [two_j1 ... two_l1 ...] [acc]", argv[0]);
+        error("Usage: %s [two_j1 ... two_l1 ...] [immirzi] [acc]", argv[0]);
     }
 
     struct sl2cfoam_config libconf;
@@ -91,7 +93,7 @@ int main(int argc, char** argv) {
 
     libconf.max_two_spin = two_l_max + 20;
 
-    sl2cfoam_init_conf("test/test_data/", Immirzi, &libconf);
+    sl2cfoam_init_conf("test/test_data/", IMMIRZI, &libconf);
 
     // compute
 
@@ -143,16 +145,11 @@ int main(int argc, char** argv) {
 
         double b4a = matrix_get(b4_acc, dimia, DIV2(two_i-two_i_min), DIV2(two_k-two_k_min));
 
-        if (fabs(b4a-b4f) >= eps * fabs(b4a)) {
-            printf("b4 fast = %.9g, b4 accurate = %.9g FAIL relative error = %g >= %g, terminate.\n", b4f, b4a, fabs((b4a-b4f)/b4a), eps);
-            check("accuracy", false);
-        }
-        printf("b4 fast = %.9g, b4 accurate = %.9g OK relative error < %g, continuing...\n", b4f, b4a, eps);
+        printf("i = %.1f, k = %.1f: b4 fast = %.12g, b4 accurate = %.12g, relative error = %g\n", 
+               SPIN(two_i), SPIN(two_k), b4f, b4a, fabs((b4a-b4f)/b4a));
 
     }
     }
-
-    printf("... test passed.\n");
 
 exit:
 
