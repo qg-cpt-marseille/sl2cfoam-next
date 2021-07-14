@@ -233,7 +233,6 @@ store_##t##_end:                                                              \
 // It must be later deallocated with TENSOR_FREE(t).
 #define TENSOR_LOAD(name, t, nkeys, path)                                     \
     {                                                                         \
-    size_t __header_bytes = sizeof(size_t) * __NUM_KEYS_MAX + __TAG_BYTES;    \
     FILE *ptr;                                                                \
     ptr = fopen(path,"rb");                                                   \
     if (ptr == NULL) {                                                        \

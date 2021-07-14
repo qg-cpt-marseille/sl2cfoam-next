@@ -195,7 +195,7 @@ static double complex coherent_state(int precision, dspin two_i,
     for (int two_m1 = -two_j1; two_m1 <= two_j1; two_m1 += 2) {
     for (int two_m2 = -two_j2; two_m2 <= two_j2; two_m2 += 2) {
         w3j12[DIV2(two_m1+two_j1)][DIV2(two_m2+two_j2)] = 
-            fw3jja6(two_j1, two_j2, two_i, two_m1, two_m2, -two_m1 - two_m2);
+            S3J(two_j1, two_j2, two_i, two_m1, two_m2, -two_m1 - two_m2);
     }
     }
 
@@ -205,7 +205,7 @@ static double complex coherent_state(int precision, dspin two_i,
     for (int two_m3 = -two_j3; two_m3 <= two_j3; two_m3 += 2) {
     for (int two_m4 = -two_j4; two_m4 <= two_j4; two_m4 += 2) {
         w3j34[DIV2(two_m3+two_j3)][DIV2(two_m4+two_j4)] = 
-            fw3jja6(two_j3, two_j4, two_i, two_m3, two_m4, -two_m3 - two_m4);
+            S3J(two_j3, two_j4, two_i, two_m3, two_m4, -two_m3 - two_m4);
     }
     }
 

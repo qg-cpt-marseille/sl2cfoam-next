@@ -179,8 +179,12 @@ const char* sl2cfoam_BLAS_vendor() {
 
 }
 
-void sl2cfoam_set_omp(bool enable) {
+void sl2cfoam_set_OMP(bool enable) {
     OMP_PARALLELIZE = enable;
+}
+
+bool sl2cfoam_get_OMP() {
+    return OMP_PARALLELIZE;
 }
 
 void sl2cfoam_vector_free(sl2cfoam_vector v) {

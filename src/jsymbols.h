@@ -51,7 +51,7 @@ TENSOR_INIT(6j_6, 6) // 6 indices
 for (dspin two_kb = two_kb##_absmin; two_kb <= two_kb##_absmax; two_kb += 2) { \
 for (dspin two_ka = two_ka##_absmin; two_ka <= two_ka##_absmax; two_ka += 2) { \
 for (dspin two_x = two_x_absmin; two_x <= two_x_absmax; two_x += 2) { \
-    double w6j = fw6jja(two_ka, two_ja, two_x, two_kb, two_jb, two_jc); \
+    double w6j = S6J(two_ka, two_ja, two_x, two_kb, two_jb, two_jc); \
     TENSOR_SET(w6j, tens, 3, DIV2(two_x-two_x_absmin), DIV2(two_ka-two_ka##_absmin), DIV2(two_kb-two_kb##_absmin)); \
 } \
 } \
@@ -304,24 +304,24 @@ static inline double sl2cfoam_w15j(dspin two_j12, dspin two_j13, dspin two_j14, 
 
     for (two_x = two_x_min; two_x <= two_x_max; two_x += 2) {
 
-        w6j_1 = fw6jja(two_i1, two_l25, two_x,
-                       two_k5, two_j14, two_j15);
+        w6j_1 = S6J(two_i1, two_l25, two_x,
+                    two_k5, two_j14, two_j15);
         if (w6j_1 == 0) continue;
 
-        w6j_2 = fw6jja(two_j14, two_k5, two_x,
-                       two_l35, two_k4, two_l45);
+        w6j_2 = S6J(two_j14, two_k5, two_x,
+                    two_l35, two_k4, two_l45);
         if (w6j_2 == 0) continue;
 
-        w6j_3 = fw6jja(two_k4, two_l35, two_x,
-                       two_k3, two_l24, two_l34);
+        w6j_3 = S6J(two_k4, two_l35, two_x,
+                    two_k3, two_l24, two_l34);
         if (w6j_3 == 0) continue;
 
-        w6j_4 = fw6jja(two_l24, two_k3, two_x,
-                       two_j13, two_k2, two_l23);
+        w6j_4 = S6J(two_l24, two_k3, two_x,
+                    two_j13, two_k2, two_l23);
         if (w6j_4 == 0) continue;
 
-        w6j_5 = fw6jja(two_k2, two_j13, two_x,
-                       two_i1, two_l25, two_j12);
+        w6j_5 = S6J(two_k2, two_j13, two_x,
+                    two_i1, two_l25, two_j12);
         if (w6j_5 == 0) continue;
 
         res += (long double)(DIM(two_x) * w6j_1 * w6j_2 * w6j_3 * w6j_4 * w6j_5);
@@ -342,8 +342,8 @@ static inline double sl2cfoam_w4jm(dspin two_j1, dspin two_j2, dspin two_j3, dsp
 				                   dspin two_i) {
 
 	double w1, w2;
-    w1 = fw3jja6(two_j1, two_j2, two_i, two_m1, two_m2, -two_m1-two_m2);
-    w2 = fw3jja6(two_i, two_j3, two_j4, two_m1+two_m2, two_m3, two_m4);
+    w1 = S3J(two_j1, two_j2, two_i, two_m1, two_m2, -two_m1-two_m2);
+    w2 = S3J(two_i, two_j3, two_j4, two_m1+two_m2, two_m3, two_m4);
 
     return real_negpow(two_i + two_m1 + two_m2) * w1 * w2;
     

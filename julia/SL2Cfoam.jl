@@ -7,19 +7,21 @@ using Libdl
 export Spin, dim, intertwiner_range,
        VerbosityOff, LowVerbosity, HighVerbosity,
        NormalAccuracy, HighAccuracy, VeryHighAccuracy,
-       Vertex, Boosters, CoherentState,
+       VertexResult, Vertex, Boosters, CoherentState,
        vertex_amplitude, vertex_compute, vertex_load,
+       vertex_BF_compute,
        boosters_compute, boosters_load, b4_compute,
        coherentstate_compute,
        contract
 
 const clib = "libsl2cfoam"
 
-# Initialization of shared libraries.
+# Initialization of shared libraries and GPU.
 function __init__()
 
-    # check if sl2cfoam C library is loaded correctly
-    dlopen(clib)
+    # load the C library shipped with this module 
+    libpath = joinpath(@__DIR__, "../lib/libsl2cfoam.so")
+    dlopen(libpath)
 
     nothing
 
@@ -101,7 +103,7 @@ function cinit(folder::String, Immirzi::Real, conf::Config)
     if !isdir(folder) throw(ArgumentError("error opening folder $folder")) end
     if Immirzi <= 0 throw(ArgumentError("Immirzi parameter must be strictly positive")) end
 
-    cconf = __C_config(Int(conf.verbosity), Int(conf.accuracy), conf.max_spin, conf.max_MB_mem_per_thread)
+    cconf = __C_config(Int(conf.verbosity), Int(conf.accuracy), ctwo(conf.max_spin), conf.max_MB_mem_per_thread)
     ccall((:sl2cfoam_init_conf, clib), Cvoid, (Cstring, Cdouble, Ref{__C_config}), folder, Immirzi, Ref(cconf))
 
     global clib_initialized = true
@@ -141,7 +143,23 @@ end
 "Enables or disables internal OMP parallelization."
 function set_OMP(enable::Bool)
 
-    @ccall clib.sl2cfoam_set_omp(enable::Cbool)::Cvoid
+    @ccall clib.sl2cfoam_set_OMP(enable::Cbool)::Cvoid
+
+end
+
+"Return if internal OMP parallelization is enabled."
+function get_OMP()
+
+    r = @ccall clib.sl2cfoam_get_OMP()::Cbool
+    Bool(r)
+
+end
+
+"Enables or disables internal OMP parallelization."
+function is_MPI()
+
+    r = @ccall clib.sl2cfoam_is_MPI()::Cbool
+    Bool(r)
 
 end
 
@@ -166,6 +184,7 @@ end
 
 # C-struct for vertex tensors.
 __C_vertex_tensor = __C_tensor{5}
+__C_vertex_BF_tensor = __C_tensor{5}
 
 # C-struct for boosters tensors.
 __C_boosters_tensor = __C_tensor{6}
@@ -194,7 +213,7 @@ mutable struct Vertex
 
     function Vertex(cptr)
 
-        if cptr == C_NULL; error("libsl2cfoam returned a NULL pointer") end
+        if cptr == C_NULL; error("libsl2cfoam returned an unexpected NULL pointer") end
         ctens = unsafe_load(cptr)
         a = unsafe_wrap(Array, ctens.d, ctens.dims; own = false)
         return Vertex(a, cptr)
@@ -224,8 +243,11 @@ function vertex_compute(js, Dl::Integer; result = VertexResult((true, true, fals
     check_cinit()
     check_spins(js, 10)
 
-    cptr = ccall((:sl2cfoam_vertex_fullrange, clib), Ptr{__C_vertex_tensor}, (Ref{Cint}, Cint, Cint), ctwo.(js), Dl, result)
+    cptr = ccall((:sl2cfoam_vertex_fullrange, clib), Ptr{__C_vertex_tensor}, 
+                 (Ref{Cint}, Cint, Cint), ctwo.(js), Dl, result)
 
+    if !result.ret return nothing end
+        
     Vertex(cptr)
 
 end
@@ -245,6 +267,8 @@ function vertex_compute(js, Dl::Integer, irange; result = VertexResult((true, tr
                  ctwo(irange[5][1]), ctwo(irange[5][2]),
                  Dl, result)
 
+    if !result.ret return nothing end
+    
     Vertex(cptr)
 
 end
@@ -295,6 +319,70 @@ end
 
 
 ###################################################################
+# BF vertex functions.
+###################################################################  
+
+"BF vertex object. Contains the data array and the pointer
+to the library tensor."
+mutable struct VertexBF
+
+    a       :: Array{Float64, 5}
+    cptr    :: Ptr{__C_vertex_BF_tensor}
+
+    function VertexBF(a::Array, cptr)
+
+        v = new(a, cptr)
+        finalizer(v) do x
+            x.cptr != C_NULL && ccall((:sl2cfoam_vertex_BF_free, clib), Cvoid, (Ptr{__C_vertex_BF_tensor},), x.cptr)
+        end
+        return v
+
+    end
+
+    function VertexBF(cptr)
+
+        if cptr == C_NULL; error("libsl2cfoam returned a NULL pointer") end
+        ctens = unsafe_load(cptr)
+        a = unsafe_wrap(Array, ctens.d, ctens.dims; own = false)
+        return VertexBF(a, cptr)
+
+    end
+
+end
+
+"Computes the BF vertex tensor given 10 spins (j12, ...).
+It optionally takes an intertwiner range ((i1_min, i1_max), (i2_min, i2_max)...)."
+function vertex_BF_compute(js)
+
+    check_cinit()
+    check_spins(js, 10)
+
+    cptr = ccall((:sl2cfoam_vertex_BF_fullrange, clib), Ptr{__C_vertex_BF_tensor}, (Ref{Cint},), ctwo.(js))
+
+    VertexBF(cptr)
+
+end
+
+function vertex_BF_compute(js, irange)
+
+    check_cinit()
+    check_spins(js, 10)
+
+    cptr = ccall((:sl2cfoam_vertex_BF_range, clib), Ptr{__C_vertex_BF_tensor}, 
+                 (Ref{Cint}, Cint, Cint, Cint, Cint, Cint, Cint, Cint, Cint, Cint, Cint),
+                 ctwo.(js), 
+                 ctwo(irange[1][1]), ctwo(irange[1][2]),
+                 ctwo(irange[2][1]), ctwo(irange[2][2]),
+                 ctwo(irange[3][1]), ctwo(irange[3][2]),
+                 ctwo(irange[4][1]), ctwo(irange[4][2]),
+                 ctwo(irange[5][1]), ctwo(irange[5][2]))
+
+    VertexBF(cptr)
+
+end
+
+
+###################################################################
 # Boosters functions.
 ###################################################################  
 
@@ -317,7 +405,7 @@ mutable struct Boosters
 
     function Boosters(cptr)
 
-        if cptr == C_NULL; error("libsl2cfoam returned a NULL pointer") end
+        if cptr == C_NULL; error("libsl2cfoam returned an unexpected NULL pointer") end
         ctens = unsafe_load(cptr)
         a = unsafe_wrap(Array, ctens.d, ctens.dims; own = false)
         return Boosters(a, cptr)
@@ -358,9 +446,8 @@ function boosters_load(gf, js, Dl::Integer)
 
 end
 
-"Computes a boosters tensor, given the gauge-fixed index (1 to 4), 4 spins
-and number of shells. Spins order must match the order of the symbol (anti-clockwise).
-An optional store parameter sets if to store the tensor after computation."
+"Computes a boosters coefficient (matrix in (i,k) intertwiner indices) 
+given 8 spins (j1...j4, l1...l4)."
 function b4_compute(js, ls)
 
     check_cinit()
@@ -457,9 +544,11 @@ end
 # Functions for contracting vertices and coherent states.
 ###################################################################
 
+const GenericVertex = Union{Vertex, VertexBF}
+
 "Contracts a multidimensional array with a vector
 over dimension with stride 1 (leftmost index)."
-function contract(a::Array, v::Vector)
+function contract(a, v)
 
     if size(a,1) != length(v)
         throw(ArgumentError("first dimension of the array does not match vector length"))
@@ -471,9 +560,8 @@ function contract(a::Array, v::Vector)
 
 end
 
-
 "Contracts an array with many vectors."
-function contract(a::Array, vs::Vararg{Vector, N}) where N
+function contract(a, vs::Vararg{Any, N}) where N
 
     dima = length(size(a))
 
@@ -487,7 +575,8 @@ function contract(a::Array, vs::Vararg{Vector, N}) where N
         cn = contract(cn, v)
     end
 
-    if isempty(size(cn)) return cn[1] end
+    # returns a scalar if complete contraction
+    if isempty(size(cn)) return only(cn) end
 
     cn
     
@@ -495,28 +584,16 @@ end
 
 "Contracts a vertex with 1 to 5 coherent states vectors
 starting from leftmost index (i5 -> i4 -> i3 ...)."
-function contract(v::Vertex, css::Vararg{CoherentState, N}) where N
+function contract(v::GenericVertex, css::Vararg{CoherentState, N}) where N
 
     if N < 1 || N > 5
         throw(ArgumentError("1 to 5 coherent states required"))
     end
 
-    # first contraction is between REAL vertex amplitudes
-    # and COMPLEX coherent state coefficients
-    re_cn = contract(v.a, real.(css[1].a))
-    im_cn = contract(v.a, imag.(css[1].a))
+    cssv = [ css[i].a for i in 1:N ]
 
-    cn = re_cn .+ im .* im_cn
-
-    for cs in css[2:end]
-        cn = contract(cn, cs.a)
-    end
-
-    if isempty(size(cn)) return cn[1] end
-
-    cn
+    GC.@preserve v cssv contract(v.a, cssv...)
     
 end
-
 
 end # module

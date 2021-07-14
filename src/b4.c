@@ -145,9 +145,8 @@ static inline void dsmall_prefactors(mpc_ptr* rop, __float128* xs, int nxs, int 
 
 }
 
-// IF there is no parallelization above (and nested parallelization is disabled)
-// then the parallelization strategy is: the computation of dsmall is parallelized
-// inside the dsmall function. Then the rest is parallelized over the p indices.
+// If there is no parallelization above, here parallelize over the p indices
+// (good for simplified case with large spins).
 sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two_j4,
                              dspin two_l1, dspin two_l2, dspin two_l3, dspin two_l4) {
 
@@ -271,12 +270,16 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
         int mph = real_negpow(two_ji-two_li);
 
         sl2cfoam_cmatrix dpi = dpall[dsmall_index];
-        sl2cfoam_cvector dpip;
-        sl2cfoam_cvector dpipm;
 
-        __complex128 ds[nxs];
-
+        #ifdef USE_OMP
+        #pragma omp parallel for if(OMP_PARALLELIZE)
+        #endif
         for (dspin two_p = is_integer(two_ji) ? 0 : 1; two_p <= two_ji; two_p += 2) {
+
+            sl2cfoam_cvector dpip;
+            sl2cfoam_cvector dpipm;
+        
+            __complex128 ds[nxs];
 
             // compute the Y coefficients
             int Jmp = DIV2(abs(two_ji - two_p)); // |J-p|
@@ -297,6 +300,11 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
                 mpc_init2(Yn[n], precision);
             }
 
+            // the following functions should not be parallelized if called
+            // from booster tensor loop since nested parallelization is
+            // disabled at initialization
+
+            // compute Y coefficients
             sl2cfoam_dsmall_Yc(Ym, precision,  rho, two_ji, two_li, two_ji,  two_p);
             sl2cfoam_dsmall_Yc(Yn, precision, -rho, two_ji, two_ji, two_li, -two_p);
 
@@ -455,8 +463,8 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
 
         int ii = DIV2(two_i-two_i_min);
 
-        double w3j = fw3jja6(two_j1, two_j2, two_i,
-                            two_p1, two_p2, -two_p1-two_p2);
+        double w3j = S3J(two_j1, two_j2, two_i,
+                         two_p1, two_p2, -two_p1-two_p2);
         TENSOR_SET(w3j, wt_ip1p2, 3, ii, DIV2(two_p1+two_j1), DIV2(two_p2+two_j2));
 
     } // i
@@ -472,8 +480,8 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
 
         int ii = DIV2(two_i-two_i_min);
 
-        double w3j = fw3jja6(two_i, two_j3, two_j4,
-                                 -two_p3-two_p4, two_p3, two_p4);
+        double w3j = S3J(two_i, two_j3, two_j4,
+                         -two_p3-two_p4, two_p3, two_p4);
         TENSOR_SET(w3j, wt_ip3p4, 3, ii, DIV2(two_p3+two_j3), DIV2(two_p4+two_j4));
 
     } // i
@@ -489,8 +497,8 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
 
         int ki = DIV2(two_k-two_k_min);
 
-        double w3j = fw3jja6(two_l1, two_l2, two_k,
-                            two_p1, two_p2, -two_p1-two_p2);
+        double w3j = S3J(two_l1, two_l2, two_k,
+                         two_p1, two_p2, -two_p1-two_p2);
         TENSOR_SET(w3j, wt_kp1p2, 3, ki, DIV2(two_p1+two_j1), DIV2(two_p2+two_j2));
 
     } // k
@@ -506,8 +514,8 @@ sl2cfoam_dmatrix sl2cfoam_b4(dspin two_j1, dspin two_j2, dspin two_j3, dspin two
 
         int ki = DIV2(two_k-two_k_min);
 
-        double w3j = fw3jja6(two_k, two_l3, two_l4,
-                            -two_p3-two_p4, two_p3, two_p4);
+        double w3j = S3J(two_k, two_l3, two_l4,
+                         -two_p3-two_p4, two_p3, two_p4);
         TENSOR_SET(w3j, wt_kp3p4, 3, ki, DIV2(two_p3+two_j3), DIV2(two_p4+two_j4));
 
     } // k

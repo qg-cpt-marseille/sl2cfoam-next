@@ -90,7 +90,7 @@ ARFLAGS = rcs
 
 INCS = src/utils.h src/jsymbols.h src/verb.h
 
-_OBJS = sl2cfoam.o setup.o vertex.o boosters.o coherentstates.o dsmall.o \
+_OBJS = sl2cfoam.o setup.o vertex.o vertex_bf.o boosters.o coherentstates.o dsmall.o \
         integration_gk.o integration_qagp.o b4.o b4_qagp.o cgamma.o
 
 _TESTS = lib_test tensor_test dsmall_test integration_test b4_test

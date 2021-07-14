@@ -54,8 +54,10 @@ int main(int argc, char **argv) {
     dspin max_two_spin = 0;
     size_t MB_per_thread = 0;
 
+    bool store_batches = false;
+
     int opt;
-    while ((opt = getopt(argc, argv, "vVhHJ:m:")) != -1) {
+    while ((opt = getopt(argc, argv, "vVhHBJ:m:")) != -1) {
         switch (opt) {
 
         case 'v': verbosity = SL2CFOAM_VERBOSE_LOW; break;
@@ -63,6 +65,8 @@ int main(int argc, char **argv) {
 
         case 'h': accuracy = SL2CFOAM_ACCURACY_HIGH; break;
         case 'H': accuracy = SL2CFOAM_ACCURACY_VERYHIGH; break;
+
+        case 'B': store_batches = true; break;
 
         case 'J': 
             sscanf(optarg, "%d", &max_two_spin);
@@ -126,7 +130,10 @@ int main(int argc, char **argv) {
 
 	sl2cfoam_init_conf(folder, Immirzi, &libconf);
 
-    sl2cfoam_vertex_fullrange(two_js, Dl, TENSOR_RESULT_STORE);
+    sl2cfoam_tensor_result tresult = TENSOR_RESULT_STORE;
+    if (store_batches) tresult |= TENSOR_RESULT_STORE_BATCHES;
+
+    sl2cfoam_vertex_fullrange(two_js, Dl, tresult);
 
     sl2cfoam_free();
 

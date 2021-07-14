@@ -26,6 +26,7 @@
 #include "boosters.h"
 #include "sl2cfoam.h"
 #include "sl2cfoam_tensors.h"
+#include "verb.h"
 
 // default filename for booster tensors
 static const char* boosters_fn = "b4__%d-%d-%d-%d__gf-%d__imm-%.3f__dl-%d.sl2t";
@@ -47,6 +48,44 @@ static const char* boosters_fn = "b4__%d-%d-%d-%d__gf-%d__imm-%.3f__dl-%d.sl2t";
 #define MAP_SPINS_5(two_ja, two_jb, two_jc, two_jd, gf) \
     two_ja = two_j15; two_jb = two_j25; two_jc = two_j35; two_jd = two_j45; gf = 1;
 
+static inline void fill_ldim(int gf, size_t ldim, size_t dims[4]) {
+
+    switch (gf)
+    {
+        case 1:
+            dims[0] = 1;
+            dims[1] = ldim;
+            dims[2] = ldim;
+            dims[3] = ldim;
+            break;
+        
+        case 2:
+            dims[0] = ldim;
+            dims[1] = 1;
+            dims[2] = ldim;
+            dims[3] = ldim;
+            break;
+
+        case 3:
+            dims[0] = ldim;
+            dims[1] = ldim;
+            dims[2] = 1;
+            dims[3] = ldim;
+            break;
+
+        case 4:
+            dims[0] = ldim;
+            dims[1] = ldim;
+            dims[2] = ldim;
+            dims[3] = 1;
+            break;
+        
+        default:
+            error("gauge-fixed index must be 1 to 4");
+    }
+
+}
+
 sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
                                             dspin two_ja, dspin two_jb, dspin two_jc,  dspin two_jd, 
                                             int Dl, bool store) {
@@ -61,63 +100,16 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
     // result tensor
     tensor_ptr(boosters) b4t = NULL;
 
+    // paths for tensors on disk
     char path[strlen(DIR_BOOSTERS) + 256];
-
-    // if different Dl tensors are found
-    tensor_ptr(boosters) b4t_found;
-
-    bool found = false;
-    dspin two_Dl_found;
     char path_found[strlen(DIR_BOOSTERS) + 256];
 
-#ifndef NO_IO
-
-    // build filename
-    char filename[256];
-    sprintf(filename, boosters_fn, two_ja, two_jb, two_jc, two_jd, gf, IMMIRZI, Dl);
-
-    strcpy(path, DIR_BOOSTERS);
-    strcat(path, "/");
-    strcat(path, filename);
-
-    // check if tensor already exists
-    // if yes return it
-    if (file_exist(path)) {
-        TENSOR_LOAD(boosters, b4t, 6, path);
-        goto tensor_return;
-    }
-
-    // go "up" from Dl+1 to DL_MAX then reset to 0 up to Dl (then stop)
-
-    int dli = Dl + 1;
-    do {
-
-        // build filename
-        sprintf(filename, boosters_fn, two_ja, two_jb, two_jc, two_jd, gf, IMMIRZI, dli);
-
-        strcpy(path_found, DIR_BOOSTERS);
-        strcat(path_found, "/");
-        strcat(path_found, filename);
-
-        if (file_exist(path_found)) {
-            found = true;
-            two_Dl_found = (dspin)(2 * dli);
-        }
-
-        dli++;
-
-        if (dli > DL_MAX) dli = 0;
-
-    } while (found != true && dli != Dl);
-
-#endif
-
-    // must compute (at least partially)
-
-    size_t ldim, idim, kdim_absmax;
+    // intertwiner ranges
 
     dspin two_i_min = max(abs(two_ja-two_jb), abs(two_jc-two_jd));
     dspin two_i_max = min(two_ja+two_jb, two_jc+two_jd);
+
+    size_t ldim, idim, kdim_absmax;
 
     ldim = Dl + 1;
     idim = DIV2(two_i_max - two_i_min) + 1;
@@ -130,34 +122,114 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
     // do nothing for degenerate cases
     if (kdim_absmax == 0) goto tensor_return;
 
-    // create tensor and set all entries to 0
-    // the gauge-fixed index has dimension 1
-    switch (gf)
-    {
-        case 1:
-            TENSOR_CREATE(boosters, b4t, 6, idim, kdim_absmax, 1, ldim, ldim, ldim);
-            break;
-        
-        case 2:
-            TENSOR_CREATE(boosters, b4t, 6, idim, kdim_absmax, ldim, 1, ldim, ldim);
-            break;
+    // look for tensors already computed
+    tensor_ptr(boosters) b4t_found = NULL;
 
-        case 3:
-            TENSOR_CREATE(boosters, b4t, 6, idim, kdim_absmax, ldim, ldim, 1, ldim);
-            break;
+    bool found = false;
+    dspin two_Dl_found = 0;
 
-        case 4:
-            TENSOR_CREATE(boosters, b4t, 6, idim, kdim_absmax, ldim, ldim, ldim, 1);
-            break;
-        
-        default:
-            error("gauge-fixed index must be 1 to 4");
+MPI_MASTERONLY_START
+#ifndef NO_IO
+
+    // build filename
+    char filename[256];
+    sprintf(filename, boosters_fn, two_ja, two_jb, two_jc, two_jd, gf, IMMIRZI, Dl);
+
+    strcpy(path, DIR_BOOSTERS);
+    strcat(path, "/");
+    strcat(path, filename);
+
+    // check if tensor already exists (on MASTER if MPI)
+    // if yes return it
+    if (file_exist(path)) {
+
+        found = true;
+        two_Dl_found = two_Dl;
+
+    } else { // look for tensors with different Dl
+
+        // go "up" from Dl+1 to DL_MAX then reset to Dl-1 and go down to 0 (then stop)
+
+        int dli = Dl + 1;
+        do {
+
+            // build filename
+            sprintf(filename, boosters_fn, two_ja, two_jb, two_jc, two_jd, gf, IMMIRZI, dli);
+
+            strcpy(path_found, DIR_BOOSTERS);
+            strcat(path_found, "/");
+            strcat(path_found, filename);
+
+            if (file_exist(path_found)) {
+                found = true;
+                two_Dl_found = (dspin)(2 * dli);
+            }
+
+            if (dli > Dl) dli++;
+            else dli--;
+
+            if (dli > DL_MAX) dli = Dl - 1;
+
+        } while (found != true && dli >= 0);
+
     }
 
-    // if a previous tensor with same spins has been found, load it
-    if (found) {
+    if (found && two_Dl_found == two_Dl) {
+
+        TENSOR_LOAD(boosters, b4t, 6, path);
+
+    } else if (found) {
+
         TENSOR_LOAD(boosters, b4t_found, 6, path_found);
+
     }
+
+#endif
+MPI_MASTERONLY_END
+
+#ifdef USE_MPI
+
+    // if MPI broadcast the found tensors to all nodes
+    // TODO: improve pretty ugly way of managing tensor dimensions for bcast
+
+    MPI_Bcast(&found, 1, MPI_C_BOOL, MPI_MASTER, MPI_COMM_WORLD);
+    MPI_Bcast(&two_Dl_found, 1, MPI_INT, MPI_MASTER, MPI_COMM_WORLD);
+
+    if (found && two_Dl_found == two_Dl) {
+
+        size_t lsize[4];
+        size_t ldim = Dl + 1;
+        fill_ldim(gf, ldim, lsize);
+        
+        TENSOR_BCAST(boosters, b4t, 6, idim, kdim_absmax, lsize[0], lsize[1], lsize[2], lsize[3]);
+
+    } else if (found) {
+
+        size_t lsize[4];
+        size_t ldim = DIV2(two_Dl_found) + 1;
+        fill_ldim(gf, ldim, lsize);
+
+        size_t kdim_absmax_found;
+        dspin two_k_absmin_found, two_k_absmax_found;
+        find_k_absolute_bounds(&kdim_absmax_found, &two_k_absmin_found, &two_k_absmax_found, 
+                                two_ja, two_jb, two_jc, two_jd, two_Dl_found, gf);
+
+        TENSOR_BCAST(boosters, b4t_found, 6, idim, kdim_absmax_found, lsize[0], lsize[1], lsize[2], lsize[3]);
+
+    }
+
+#endif
+
+    // shortcut if exact tensor found
+    if (found && two_Dl_found == two_Dl) goto tensor_return;
+
+    // must compute (at least partially)
+
+    // result tensor index size
+    size_t lsize[4];
+    fill_ldim(gf, ldim, lsize);
+
+    TENSOR_CREATE(boosters, b4t, 6, idim, kdim_absmax, lsize[0], lsize[1], lsize[2], lsize[3]);
 
     // trick: collapse the for loop for the gauge fixed index
     dspin two_la_max, two_lb_max, two_lc_max, two_ld_max;
@@ -274,10 +346,10 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
     } // ld
 
     // check if to enable parallelization or not at this level
-    // do NOT if the ls to compute (on this node if MPI)
-    // are less than the number of cores
+    // do NOT if the ls to compute (on this node if MPI) are < 4
+    // (simplified case or MPI)
     bool go_parallel = true;
-    if (ls_todo_size < omp_get_max_threads()) go_parallel = false;
+    if (ls_todo_size < 4) go_parallel = false;
 
     #ifdef USE_OMP
     #pragma omp parallel for schedule(dynamic, 1) if(OMP_PARALLELIZE && go_parallel)
@@ -354,24 +426,18 @@ sl2cfoam_tensor_boosters* sl2cfoam_boosters(int gf,
         MPI_MASTERONLY_DO TENSOR_STORE(b4t, path);
     }
 
-    if (found) {
-       TENSOR_FREE(b4t_found); 
-    }
-
-   #ifdef USE_MPI
-
-    // TODO: better to broadcast or load from disk?
-    //       and probably the barrier is not needed
+    #ifdef USE_MPI
 
     // broadcast the reduced tensor to all nodes
     MPI_Bcast(b4t->d, b4t->dim, MPI_DOUBLE, MPI_MASTER, MPI_COMM_WORLD);
 
-    // ensure the stored tensor is seen by all from now on
-    MPI_Barrier(MPI_COMM_WORLD);
-
     #endif
 
 tensor_return:
+
+    if (b4t_found != NULL) {
+       TENSOR_FREE(b4t_found); 
+    }
 
     return b4t;
     

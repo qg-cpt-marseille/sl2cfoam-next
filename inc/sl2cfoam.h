@@ -113,7 +113,10 @@ const char* sl2cfoam_BLAS_vendor();
 // Enables or disables internal parallelization with OpenMP at runtime.
 // (Parallelization is ON by default if not disabled at compile time 
 // with OMP=0; in this latter case this function has no effect)
-void sl2cfoam_set_omp(bool enable);
+void sl2cfoam_set_OMP(bool enable);
+
+// Returns if internal parallelization with OpenMP is enabled at runtime.
+bool sl2cfoam_get_OMP();
 
 ///////////////////////////////////////////////////////////////////////////
 // Vertex amplitude functions.
@@ -171,6 +174,28 @@ sl2cfoam_tensor_vertex* sl2cfoam_vertex_fullrange_load(sl2cfoam_dspin two_js[10]
 // NULL is returned is there is an error loading the file.
 // This function can be called without initializing the library.
 sl2cfoam_tensor_vertex* sl2cfoam_vertex_load(char* path);
+
+
+///////////////////////////////////////////////////////////////////////////
+// BF vertex amplitude functions.
+///////////////////////////////////////////////////////////////////////////
+
+// 4D BF vertex (15j) tensor in the 5 intertwiner indices.
+// NB: indices order is reversed -> (i5 i4 i3 i2 i1)
+//     and memory layout is COLUMN-MAJOR.
+// Macro defines type sl2cfoam_tensor_vertex_BF.
+TENSOR_INIT(vertex_BF, 5);
+
+// Computes a the BF vertex amplitudes for all intertwiners in the given range, given spins js.
+sl2cfoam_tensor_vertex_BF* sl2cfoam_vertex_BF_range(sl2cfoam_dspin two_js[10],
+                                                    sl2cfoam_dspin two_i1_min, sl2cfoam_dspin two_i1_max, 
+                                                    sl2cfoam_dspin two_i2_min, sl2cfoam_dspin two_i2_max, 
+                                                    sl2cfoam_dspin two_i3_min, sl2cfoam_dspin two_i3_max, 
+                                                    sl2cfoam_dspin two_i4_min, sl2cfoam_dspin two_i4_max, 
+                                                    sl2cfoam_dspin two_i5_min, sl2cfoam_dspin two_i5_max);
+
+// Computes the BF vertex tensor for all allowed intertwiners.
+sl2cfoam_tensor_vertex_BF* sl2cfoam_vertex_BF_fullrange(sl2cfoam_dspin two_js[10]);
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -234,6 +259,9 @@ sl2cfoam_cvector sl2cfoam_coherentstate_fullrange(sl2cfoam_dspin two_js[4],
 
 // Frees a vertex tensor.
 void sl2cfoam_vertex_free(sl2cfoam_tensor_vertex* t);
+
+// Frees a BF vertex tensor.
+void sl2cfoam_vertex_BF_free(sl2cfoam_tensor_vertex_BF* t);
 
 // Frees a boosters tensor.
 void sl2cfoam_boosters_free(sl2cfoam_tensor_boosters* t);

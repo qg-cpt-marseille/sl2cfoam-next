@@ -159,12 +159,19 @@ void sl2cfoam_init_conf(char* root_folder, double Immirzi, struct sl2cfoam_confi
     // initialize wigxjpf
     wig_table_init(conf->max_two_spin, 6);
 
+    #ifndef NO_IO
+
     // load fastwig tables
     find_fastwig_tables(DATA_ROOT);
     load_fastwig_tables();
 
+    #endif
+
     // enable OMP parallelization by default
     OMP_PARALLELIZE = true;
+
+    // no nested parallelism
+    omp_set_max_active_levels(1);
 
     // setup BLAS libraries
     #ifdef USE_MKL
@@ -217,7 +224,10 @@ void sl2cfoam_free() {
 	
     // wigxjpf
     wig_table_free();
+
+    #ifndef NO_IO
     unload_fastwig_tables();
+    #endif
 
     // free paths
     free(DATA_ROOT);

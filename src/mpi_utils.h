@@ -56,12 +56,22 @@ extern "C" {
 #define MPI_MASTERONLY_END }
 #define MPI_MASTERONLY_DO if (mpi_rank == MPI_MASTER)
 
+#define TENSOR_BCAST(name, t, nkeys, ...)                                         \
+    {                                                                             \
+    if (mpi_rank != MPI_MASTER && t == NULL) {                                    \
+        TENSOR_CREATE(name, t, nkeys, __VA_ARGS__);                               \
+    }                                                                             \
+    MPI_Bcast(t->d, t->dim, MPI_DOUBLE, MPI_MASTER, MPI_COMM_WORLD);              \
+    }
+
 #else
 
 #define MPI_FUNC_INIT() {}
 #define MPI_MASTERONLY_START
 #define MPI_MASTERONLY_END
 #define MPI_MASTERONLY_DO
+
+#define TENSOR_BCAST(name, t, nkeys, ...) {}
 
 #endif
 

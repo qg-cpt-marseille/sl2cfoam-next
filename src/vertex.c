@@ -236,6 +236,41 @@ sl2cfoam_tensor_vertex* sl2cfoam_vertex_fullrange(dspin two_js[10], int Dl, sl2c
     // full tensor
     tensor_ptr(vertex) t_full = NULL;
 
+    // look for previously computed tensor
+
+#ifndef NO_IO
+    
+    char path[strlen(DIR_AMPLS) + 512];
+    build_vertex_path_fullrange(path, two_js, Dl);
+
+    if (file_exist(path)) {
+        
+        MPI_MASTERONLY_START
+
+        verb(SL2CFOAM_VERBOSE_HIGH, "[ previously computed full tensor found ]\n");
+
+        if (bitmask_has(tresult, TENSOR_RESULT_RETURN)) {
+                
+            TENSOR_LOAD(vertex, t_full, 5, path);
+
+            if (t_full == NULL) {
+                verb(SL2CFOAM_VERBOSE_LOW, "Error loading previously computed full tensor\n");
+            }
+
+            return t_full;
+
+        }
+            
+        MPI_MASTERONLY_END
+
+        return NULL;
+
+    }
+
+#endif
+
+    // no stored tensor found, computing
+
     MPI_MASTERONLY_DO verb(SL2CFOAM_VERBOSE_LOW, "Computing full tensor...\n");
     MPI_MASTERONLY_DO TIC();  
 
@@ -306,7 +341,7 @@ MPI_MASTERONLY_END
 
             two_i1_max_batch = min(two_i1_min_batch + 2*(i1_size_per_thread - 1), two_i1_max_allowed);
             
-            MPI_MASTERONLY_DO verb(SL2CFOAM_VERBOSE_HIGH, "[ batching: computing two_i1 from %d to %d...]\n", two_i1_min_batch, two_i1_max_batch);
+            MPI_MASTERONLY_DO verb(SL2CFOAM_VERBOSE_HIGH, "[ batching: computing two_i1 from %d to %d... ]\n", two_i1_min_batch, two_i1_max_batch);
             tbatch = sl2cfoam_vertex_range(two_js,
                                            two_i1_min_batch, two_i1_max_batch, 
                                            two_i2_min_allowed, two_i2_max_allowed, 
@@ -379,19 +414,7 @@ MPI_MASTERONLY_START
 
     // store if configured
     if (t_full != NULL && bitmask_has(tresult, TENSOR_RESULT_STORE)) {
-
-        // build path
-        char path[strlen(DIR_AMPLS) + 512];
-        build_vertex_path_fullrange(path, two_js, Dl);
-
-        // check if the file already exists
-        // if yes do not store again
-        if (!file_exist(path)) {
-            TENSOR_STORE(t_full, path);
-        } else {
-            verb(SL2CFOAM_VERBOSE_HIGH, "[ Previously computed tensor has been found, not storing again. ]\n");
-        }
-
+        TENSOR_STORE(t_full, path);
     }
 
 #endif
@@ -493,7 +516,14 @@ MPI_MASTERONLY_START
         // check if requested tensor has already been computed
         if (file_exist(path_found)) {
 
+            verb(SL2CFOAM_VERBOSE_HIGH, "[ previously computed partial tensor found ]\n");
+
             TENSOR_LOAD(vertex, t_found, 5, path_found);
+
+            if (t_found == NULL) {
+                verb(SL2CFOAM_VERBOSE_LOW, "Error loading previously computed partial tensor\n");
+            }
+
             if (t_found != NULL) {
                 
                 found = true;
@@ -521,10 +551,11 @@ MPI_MASTERONLY_END
 
         if (two_Dl_found == two_Dl) {
             t_range = t_found;
-            goto tensor_return;
+            goto tensor_range_return;
         }
 
-        MPI_MASTERONLY_DO verb(SL2CFOAM_VERBOSE_LOW, "Found vertex tensor with lower Dl = %d, accumulating...\n", DIV2(two_Dl_found));
+        MPI_MASTERONLY_DO verb(SL2CFOAM_VERBOSE_HIGH, 
+            "[ found vertex tensor with lower Dl = %d, accumulating... ]\n", DIV2(two_Dl_found));
         
     } 
 
@@ -578,7 +609,7 @@ MPI_MASTERONLY_END
 
     // sometimes triangular inequalities leave nothing to compute
     // (e.g. in batching)
-    if (two_x_absmax < two_x_absmin) goto tensor_return;
+    if (two_x_absmax < two_x_absmin) goto tensor_range_return;
 
     size_t x_size = DIV2(two_x_absmax - two_x_absmin) + 1;
 
@@ -982,7 +1013,7 @@ MPI_MASTERONLY_START
 
 MPI_MASTERONLY_END
 
-tensor_return:
+tensor_range_return:
 
 MPI_MASTERONLY_START
 

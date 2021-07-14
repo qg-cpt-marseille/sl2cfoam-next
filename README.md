@@ -1,17 +1,19 @@
-# SL2Cfoam-next: computing LQG vertex amplitudes
+# SL2Cfoam-next
 
-**SL2Cfoam-next** is a library for computing vertex amplitudes of Loop Quantum Gravity. The library is optimized for computing the EPRL vertex amplitude [Engle et al., 2008] for all possible boundary intertwiners and fixed boundary spins. The amplitudes are stored in 5-dimensional arrays of double-precision numbers and can be manipulated using the provided C bindings or a convenient Julia module.
+*A high performance code for EPRL spin foam amplitudes*
+
+**SL2Cfoam-next** is a library for computing spin foam amplitudes of covariant Loop Quantum Gravity. The library is optimized for computing the Lorentzian EPRL vertex amplitude [Engle et al., 2008] for all possible boundary intertwiners at fixed boundary spins. The amplitudes are stored in 5-dimensional arrays of double-precision numbers and can be manipulated using the provided C bindings or a convenient Julia module.
 
 ## Features
 
-The computation uses the EPRL splitting introduced in [Speziale, 2017]. In particular, the library splits the amplitude in the computation of: _(i)_ SU(2) recoupling symbols _(ii)_ SL(2,C) dipole amplitudes (_boosters_) and _(iii)_ shelled sums. The library exports methods to compute:
+The computation uses the EPRL splitting introduced in [Speziale, 2017]. In particular, the library splits the amplitude in the computation of: _(i)_ SU(2) recoupling symbols; _(ii)_ SL(2,C) dipole amplitudes (_boosters_) and _(iii)_ shelled sums. The library exports methods to compute:
 
-- EPRL vertex amplitudes as tensors
-- a single EPRL vertex amplitude
-- Livine-Speziale coherent state coefficients
+- Lorentzian EPRL vertex amplitudes as tensors
+- BF vertex amplitudes as tensors
 - booster coefficients as tensors
+- Livine-Speziale coherent state coefficients as vectors
 
-The Julia interface implements all these methods as well as additional methods for contracting vertex tensors with coherent states. Two additional tools are provided as standalone programs to compute a single amplitude and to store a full vertex tensor.
+The Julia interface implements all these methods as well as additional methods for contracting vertex tensors with coherent states and offloading the contractions to the GPU. Two additional tools are provided as standalone programs to compute a single amplitude and to store a full vertex tensor.
 
 ## Dependencies
 
@@ -24,12 +26,13 @@ The library depends on:
 5. a BLAS implementation
 6. OpenMPI (optional)
 7. Julia >= 1.5 (optional)
+8. Julia modules: HalfIntegers, CUDA (optional)
 
 ## Compilation
 
 The library can be compiled typing `make`. This compiles the shared library, the test programs and the library tools. There are additional flags that can be provided. For example:
 
-- type `make BLAS=mkl/blasfeo/system` to choose between different BLAS libraries [Frison et al., 2018]
+- type `make BLAS=mkl/blasfeo/system` to choose between different BLAS libraries [Frison et al., 2018] (default is MKL)
 - type `make DEBUG=1` to build the debug version
 - type `make MPI=1` to build the MPI version
 - type `make OMP=0` to disable builtin OpenMP parallelization
@@ -44,13 +47,13 @@ See `inc/sl2cfoam.h`.
 
 ## Usage (Julia interface)
 
-You must init the C library calling `SL2Cfoam.cinit(...)` providing:
+To use the Julia interface the module `SL2Cfoam` must be imported. You must init the C library calling `SL2Cfoam.cinit(...)` providing:
 
 1. a root folder with fastwigxj tables (one file with extension `.6j` and one with `.3j`)
 2. the Immirzi parameter (can be later changed at runtime)
 3. a `SL2Cfoam.Config` object with additional configuration
 
-When finished please call `SL2Cfoam.cclear()`. To compute a vertex tensor call `vertex_compute(...)` providing a list of 10 spins, the number of shells (from 0 to 100) and optionally a range of intertwiners. You can load vertex tensors computed with the C library calling `vertex_load(...)`. You can compute coherent states coefficients calling `coherentstates_compute(...)`. You can contract a vertex tensor with 1 to 5 coherent states coefficients using `contract(v, cs...)`. See `julia/SL2Cfoam.jl` for more functions and details.
+When finished call `SL2Cfoam.cclear()`. To compute a vertex tensor call `vertex_compute(...)` providing a list of 10 spins, the number of shells (from 0 to 50) and optionally a range of intertwiners. You can load vertex tensors computed with the C library calling `vertex_load(...)`. You can compute coherent states coefficients calling `coherentstates_compute(...)`. You can contract a vertex tensor with 1 to 5 coherent states coefficients using `contract(v, cs...)`. See `julia/SL2Cfoam.jl` for more functions and details. For GPU offloading you must load the additional modules `SL2CfoamGPU` and `CUDA`.
 
 ## License
 
