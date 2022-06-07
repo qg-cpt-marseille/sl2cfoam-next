@@ -70,5 +70,5 @@ See the GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with SL2CFOAM-NEXT. If not, see <http://www.gnu.org/licenses/>.
 
-If you use the library you should cite the following paper: "Francesco Gozzini, *High-performance spinfoam numerics*, in preparation." 
+If you use the library you should cite the following paper: "Francesco Gozzini, *A high-performance code for EPRL spin foam amplitudes*, Class. Quantum Grav. 38, 225010, doi:10.1088/1361-6382/ac2b0b." 
 
