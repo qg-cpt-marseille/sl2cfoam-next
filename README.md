@@ -4,6 +4,9 @@
 
 **SL2Cfoam-next** is a library for computing spin foam amplitudes of covariant Loop Quantum Gravity. The library is optimized for computing the Lorentzian EPRL vertex amplitude [Engle et al., 2008] for all possible boundary intertwiners at fixed boundary spins. The amplitudes are stored in 5-dimensional arrays of double-precision numbers and can be manipulated using the provided C bindings or a convenient Julia module.
 
+## Quickstart
+To start computing spin foam amplitudes immediately, follow the new [quickstart guide](QUICKSTART.md).
+
 ## Features
 
 The computation uses the EPRL splitting introduced in [Speziale, 2017]. In particular, the library splits the amplitude in the computation of: _(i)_ SU(2) recoupling symbols; _(ii)_ SL(2,C) dipole amplitudes (_boosters_) and _(iii)_ shelled sums. The library exports methods to compute:
@@ -30,7 +33,7 @@ The library depends on:
 
 ## Compilation
 
-The library can be compiled typing `make`. This compiles the shared library, the test programs and the library tools. There are additional flags that can be provided. For example:
+The library can be compiled by typing `make`. This compiles the shared library, the test programs and the library tools. There are additional flags that can be provided. For example:
 
 - type `make BLAS=mkl/blasfeo/system` to choose between different BLAS libraries [Frison et al., 2018] (default is MKL)
 - type `make DEBUG=1` to build the debug version
@@ -70,5 +73,5 @@ See the GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with SL2CFOAM-NEXT. If not, see <http://www.gnu.org/licenses/>.
 
-If you use the library you should cite the following paper: "Francesco Gozzini, *A high-performance code for EPRL spin foam amplitudes*, Class. Quantum Grav. 38, 225010, doi:10.1088/1361-6382/ac2b0b." 
+If you use the library, cite the following paper: "Francesco Gozzini, *A high-performance code for EPRL spin foam amplitudes*, Class. Quantum Grav. 38, 225010, doi:10.1088/1361-6382/ac2b0b." 
 
