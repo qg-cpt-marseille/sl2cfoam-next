@@ -395,15 +395,15 @@ MPI_MASTERONLY_START
         tag.Immirzi = IMMIRZI;
         memcpy(tag.two_js, two_js, 10 * sizeof(dspin));
         tag.two_i1_range[0] = two_i1_min_allowed;
-        tag.two_i1_range[2] = two_i1_max_allowed;
+        tag.two_i1_range[1] = two_i1_max_allowed;
         tag.two_i2_range[0] = two_i2_min_allowed;
-        tag.two_i2_range[2] = two_i2_max_allowed;
+        tag.two_i2_range[1] = two_i2_max_allowed;
         tag.two_i3_range[0] = two_i3_min_allowed;
-        tag.two_i3_range[2] = two_i3_max_allowed;
+        tag.two_i3_range[1] = two_i3_max_allowed;
         tag.two_i4_range[0] = two_i4_min_allowed;
-        tag.two_i4_range[2] = two_i4_max_allowed;
+        tag.two_i4_range[1] = two_i4_max_allowed;
         tag.two_i5_range[0] = two_i5_min_allowed;
-        tag.two_i5_range[2] = two_i5_max_allowed;
+        tag.two_i5_range[1] = two_i5_max_allowed;
         tag.Dl = Dl;
 
         TENSOR_TAG(t_full, &tag, sizeof(tag));
@@ -976,15 +976,15 @@ MPI_MASTERONLY_START
         tag.Immirzi = IMMIRZI;
         memcpy(tag.two_js, two_js, 10 * sizeof(dspin));
         tag.two_i1_range[0] = two_i1_min;
-        tag.two_i1_range[2] = two_i1_max;
+        tag.two_i1_range[1] = two_i1_max;
         tag.two_i2_range[0] = two_i2_min;
-        tag.two_i2_range[2] = two_i2_max;
+        tag.two_i2_range[1] = two_i2_max;
         tag.two_i3_range[0] = two_i3_min;
-        tag.two_i3_range[2] = two_i3_max;
+        tag.two_i3_range[1] = two_i3_max;
         tag.two_i4_range[0] = two_i4_min;
-        tag.two_i4_range[2] = two_i4_max;
+        tag.two_i4_range[1] = two_i4_max;
         tag.two_i5_range[0] = two_i5_min;
-        tag.two_i5_range[2] = two_i5_max;
+        tag.two_i5_range[1] = two_i5_max;
         tag.Dl = Dl;
 
         TENSOR_TAG(t_range, &tag, sizeof(tag));
