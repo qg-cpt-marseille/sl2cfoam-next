@@ -74,8 +74,8 @@ cd ext
 Second, download, untar, and compile the `wigxjpf` library. Notice how we rename the directory, removing the version number to comply with the `sl2cfoam-next` makefile.
 
 ```
-wget http://fy.chalmers.se/subatom/wigxjpf/wigxjpf-1.11.tar.gz
-mv wigxjpf-1.11.tar.gz wigxjpf.tar.gz
+wget http://fy.chalmers.se/subatom/wigxjpf/wigxjpf-1.13.tar.gz
+mv wigxjpf-1.13.tar.gz wigxjpf.tar.gz
 tar -xf wigxjpf.tar.gz
 cd wigxjpf
 make
