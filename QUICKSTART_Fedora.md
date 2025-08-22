@@ -122,23 +122,31 @@ Precompute the $(3jm)$ and ${6j}$ symbols you will use in your calculations. Use
 
 In the directory `data_sl2cfoam`, you should see two new files, `table_50.3j` and `table_40.6j`, respectively, containing all the $(3jm)$ symbols with spins up to 25 (50/2) and all the ${6j}$ symbols with spins up to 20 (40/2).
 
-**Step 4.** Move back to the main directory `cd ..` and compile the library
+**Step 4.** Move back to the main directory `cd ..` set the environment vards of MKL and compile the library
+```[bash]
+source /opt/intel/oneapi/setvars.sh
+```
+and 
 
 ```[bash]
 make
 ```
-
+<!-- 
 If you see an error complaining that the system cannot find `mkl` please edit the `sl2cfoam-next` `MAKEFILE` and replace line 67 with the correct mkl path. On _Ubuntu 22.04 LTS_ that line should read
 
 ```[txt]
 BLAS_CFLAGS = -DUSE_MKL -I/usr/include/mkl -DMKL_ILP64
-```
+``` -->
 
 **Step 5.** You are ready to use `sl2cfoam-next` directly in `C`. However, one of the main advantages of `sl2cfoam-next` is its `Julia` interface. You will set it up in the next section.
 
 ## 3. Install Julia
 
-You can download and install Julia following the instructions from its [website](https://julialang.org/downloads/). Our advice is just to download the latest stable version and just untar it.
+You can download and install Julia following the instructions from its [website](https://julialang.org/downloads/). Our advice is just to download the latest stable version and just untar it. Otherwise use the installation script Julia provides 
+
+```[bash]
+curl -fsSL https://install.julialang.org | sh
+```
 
 The only delicate additional step is to replace the `libmpfr` included with Julia. The version you installed at the beginning of this document. You should replace `julia-1.9.4/lib/julia/libmpfr.so.6.1.1` with `usr/local/lib/libmpfr.so.6.1.1`. Please change the version numbers of both Julia and `libmpfr` to your case.
 In our case, our system had `libmpfr.so.6.2.1` we just removed Julia's version of the library, replaced it with ours, and renamed our version to match `libmpfr.so.6.1.1`.
@@ -146,6 +154,7 @@ In our case, our system had `libmpfr.so.6.2.1` we just removed Julia's version o
 Next, you need to export the location of `sl2cfoam-next` to tell Julia where to find it. Just run the following two `export` commands
 
 ```[bash]
+
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/sl2cfoam-next/lib
 export JULIA_LOAD_PATH="/path/to/sl2cfoam-next/julia/:$JULIA_LOAD_PATH"
 ```
