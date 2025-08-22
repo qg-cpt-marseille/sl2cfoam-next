@@ -48,7 +48,7 @@ sudo nano /etc/yum.repos.d/oneAPI.repo
 
 and paste this in it
 
-```
+```[text]
 [oneAPI]
 name=Intel® oneAPI repository
 baseurl=https://yum.repos.intel.com/oneapi
@@ -83,7 +83,7 @@ cd ext
 
 Second, download, untar, and compile the `wigxjpf` library. Notice how we rename the directory, removing the version number to comply with the `sl2cfoam-next` makefile.
 
-```
+```[bash]
 wget http://fy.chalmers.se/subatom/wigxjpf/wigxjpf-1.13.tar.gz
 tar -xf wigxjpf-1.13.tar.gz
 mv wigxjpf-1.13 wigxjpf
@@ -123,15 +123,18 @@ Precompute the $(3jm)$ and ${6j}$ symbols you will use in your calculations. Use
 In the directory `data_sl2cfoam`, you should see two new files, `table_50.3j` and `table_40.6j`, respectively, containing all the $(3jm)$ symbols with spins up to 25 (50/2) and all the ${6j}$ symbols with spins up to 20 (40/2).
 
 **Step 4.** Move back to the main directory `cd ..` set the environment vards of MKL and compile the library
+
 ```[bash]
 source /opt/intel/oneapi/setvars.sh
 ```
-and 
+
+and
 
 ```[bash]
 make
 ```
-<!-- 
+
+<!--
 If you see an error complaining that the system cannot find `mkl` please edit the `sl2cfoam-next` `MAKEFILE` and replace line 67 with the correct mkl path. On _Ubuntu 22.04 LTS_ that line should read
 
 ```[txt]
@@ -142,7 +145,7 @@ BLAS_CFLAGS = -DUSE_MKL -I/usr/include/mkl -DMKL_ILP64
 
 ## 3. Install Julia
 
-You can download and install Julia following the instructions from its [website](https://julialang.org/downloads/). Our advice is just to download the latest stable version and just untar it. Otherwise use the installation script Julia provides 
+You can download and install Julia following the instructions from its [website](https://julialang.org/downloads/). Our advice is just to download the latest stable version and just untar it. Otherwise use the installation script Julia provides
 
 ```[bash]
 curl -fsSL https://install.julialang.org | sh
@@ -178,7 +181,7 @@ If you want to use a [Jupyter notebook](https://jupyter.org/) (we strongly sugge
 Pkg.add("IJulia")
 ```
 
-# First calculation
+## First calculation
 
 You are ready to use `sl2cfoam-next` to perform calculations. The simplest example is to compute the EPRL vertex amplitude with Immirzi parameter $\gamma = 1.2$ and truncation parameter $DL=5$. First, setup the library
 
@@ -192,7 +195,7 @@ SL2Cfoam.cinit(sl2c_data_folder, Immirzi, sl2c_configuration)
 
 Second, compute the vertex
 
-```
+```[julia]
 Dl = 5
 spins = j245, j125, j124, j145, j235, j234, j345, j123, j135, j134 = ones(10)
 v = vertex_compute(spins, Dl);

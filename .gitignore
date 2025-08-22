@@ -5,6 +5,7 @@ lib/
 dbg/
 ext/*
 !ext/b4_collet.c
+data_sl2cfoam
 
 ### VS Code config
 .vscode/
