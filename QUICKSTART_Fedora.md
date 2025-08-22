@@ -39,11 +39,15 @@ sudo dnf install libmpc libmpc-devel
 ```[bash]
 sudo dnf install gsl gsl-devel
 ```
-To install Intel MKL you need first to add the repo to the dnf manager. I followed the instruction on the [Intel MKL website](https://www.intel.com/content/www/us/en/docs/oneapi/installation-guide-linux/2023-1/yum-dnf-zypper.html#GUID-01F72C0F-4297-49AE-ABB0-41709E2D9E2C). First create the file 
+
+To install Intel MKL you need first to add the repo to the dnf manager. I followed the instruction on the [Intel MKL website](https://www.intel.com/content/www/us/en/docs/oneapi/installation-guide-linux/2023-1/yum-dnf-zypper.html#GUID-01F72C0F-4297-49AE-ABB0-41709E2D9E2C). First create the file
+
 ```[bash]
 sudo nano /etc/yum.repos.d/oneAPI.repo
 ```
+
 and paste this in it
+
 ```
 [oneAPI]
 name=Intel® oneAPI repository
@@ -53,13 +57,15 @@ gpgcheck=1
 repo_gpgcheck=1
 gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
 ```
+
 then just update dnf and install the packages you need
+
 ```[bash]
 sudo dnf update
 sudo dnf install intel-oneapi-mkl intel-oneapi-mkl-devel
 ```
 
-##  2. Install `sl2cfoam-next`
+## 2. Install `sl2cfoam-next`
 
 **Step 1.** First, clone the repository in a working directory
 
@@ -79,8 +85,8 @@ Second, download, untar, and compile the `wigxjpf` library. Notice how we rename
 
 ```
 wget http://fy.chalmers.se/subatom/wigxjpf/wigxjpf-1.13.tar.gz
-mv wigxjpf-1.11.tar.gz wigxjpf.tar.gz
-tar -xf wigxjpf.tar.gz
+tar -xf wigxjpf-1.13.tar.gz
+mv wigxjpf-1.13 wigxjpf
 cd wigxjpf
 make
 cd ..
@@ -90,18 +96,15 @@ Last, download, untar, and compile the `fastwigxj` library. Notice how we rename
 
 ```[bash]
 wget http://fy.chalmers.se/subatom/fastwigxj/fastwigxj-1.4.1.tar.gz
-mv fastwigxj-1.4.1.tar.gz fastwigxj.tar.gz
-tar -xf fastwigxj.tar.gz
+tar -xf fastwigxj-1.4.1.tar.gz
+mv fastwigxj-1.4.1 fastwigxj
 cd fastwigxj
-```
-
-If you are using a recent version of GCC there is a [problem](http://fy.chalmers.se/subatom/fastwigxj/CHANGELOG) with calculating the ${9j}$ symbols and `fastwigxj` refuses to compile. You do not worry about it, as `sl2cfoam-next` doesn't use them. To circumvent this problem, you need to edit the file `src/wigner9j_canonicalize.c` and comment the last block of code using `/* ... */`. 
-Then, you can go back to the main `fastwigxj` directory and compile.
-
-```[bash]
 make
 cd ..
 ```
+
+<!-- If you are using a recent version of GCC there is a [problem](http://fy.chalmers.se/subatom/fastwigxj/CHANGELOG) with calculating the ${9j}$ symbols and `fastwigxj` refuses to compile. You do not worry about it, as `sl2cfoam-next` doesn't use them. To circumvent this problem, you need to edit the file `src/wigner9j_canonicalize.c` and comment the last block of code using `/* ... */`.
+Then, you can go back to the main `fastwigxj` directory and compile. -->
 
 **Step 3.** Create a data directory. In this directory, you will store all the symbols you create in the calculations. In the main `sl2cfoam-next` directory, create the `data_sl2cfoam` directory and enter it.
 
@@ -133,11 +136,11 @@ BLAS_CFLAGS = -DUSE_MKL -I/usr/include/mkl -DMKL_ILP64
 
 **Step 5.** You are ready to use `sl2cfoam-next` directly in `C`. However, one of the main advantages of `sl2cfoam-next` is its `Julia` interface. You will set it up in the next section.
 
-##  3. Install Julia
+## 3. Install Julia
 
 You can download and install Julia following the instructions from its [website](https://julialang.org/downloads/). Our advice is just to download the latest stable version and just untar it.
 
-The only delicate additional step is to replace the `libmpfr` included with Julia. The version you installed at the beginning of this document. You should replace `julia-1.9.4/lib/julia/libmpfr.so.6.1.1` with `usr/local/lib/libmpfr.so.6.1.1`. Please change the version numbers of both Julia and `libmpfr` to your case. 
+The only delicate additional step is to replace the `libmpfr` included with Julia. The version you installed at the beginning of this document. You should replace `julia-1.9.4/lib/julia/libmpfr.so.6.1.1` with `usr/local/lib/libmpfr.so.6.1.1`. Please change the version numbers of both Julia and `libmpfr` to your case.
 In our case, our system had `libmpfr.so.6.2.1` we just removed Julia's version of the library, replaced it with ours, and renamed our version to match `libmpfr.so.6.1.1`.
 
 Next, you need to export the location of `sl2cfoam-next` to tell Julia where to find it. Just run the following two `export` commands
