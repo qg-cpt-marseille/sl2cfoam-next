@@ -1,10 +1,10 @@
 # Installation
 
-This guide will help you install `sl2cfoam-next` on a Linux machine. All the steps have been tested on a new _Ubuntu 22.04 LTS_ installation.
+This guide will help you install `sl2cfoam-next` on a Linux machine. All steps have been tested on a new _Fedora 42_ installation.
 
 ## 1. Install the dependencies
 
-We assume you have the following packages already installed on your computer `lzip, gcc, g++, m4, make`. If you miss any, you can use your package manager to install them. In the following, we will use as an example `apt` (Advanced package tool), which is the default package manager on _Debian_ based distributions like _Ubuntu 22.04 LTS_
+We assume you have the following packages already installed on your computer `zip, gcc, g++, m4, make`. If you miss any, you can use your package manager to install them. In the following, we will use as an example `dnf`, which is the default package manager on _RedHat_ based distributions like _Fedora 42_
 
 ```[bash]
 sudo dnf install zip gcc g++ m4 make
